@@ -24,6 +24,11 @@ struct file_item *parse_list(char *text_list) {
 	while(line != NULL) {
 		struct file_item *item = parse_line(line);
 
+		if(item == NULL) {
+			line = strtok_r(NULL, "\n", &save);
+			continue;
+		}
+
 		if(first_item == NULL) {
 			first_item = item;
 		} else {
@@ -39,10 +44,16 @@ struct file_item *parse_list(char *text_list) {
 }
 
 struct file_item *parse_line(char *line) {
+	if( (line[0] != '-') && (line[0] != 'd') && (line[0] != 'l')) {
+		return NULL;
+	}
+
 	char *save;
 	char *column = strtok_r(line, " \t", &save);
 
 	struct file_item *item = malloc(sizeof(struct file_item));
+
+	item->next = NULL;
 
 	int i = 0;
 
@@ -111,6 +122,16 @@ struct file_item *parse_line(char *line) {
 
 		column = strtok_r(NULL, " \t", &save);
 		i++;
+	}
+	
+	str_trim(item->file_name);
+
+	//skip . and .. dirs, dont want to show those
+	if( (strlen(item->file_name) == 0) ||
+		(strcmp(item->file_name, ".") == 0) || 
+		(strcmp(item->file_name, "..") == 0)) {
+		free(item);
+		return NULL;
 	}
 
 	return item;

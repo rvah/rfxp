@@ -11,9 +11,11 @@
 #include "filesystem.h"
 #include "site.h"
 #include "log.h"
+#include "parse.h"
 
 #define CONTROL_BUF_SZ 1024 // max number of bytes we can get at once 
 #define CONTROL_LINE_SZ 1024
+#define CONTROL_INT_BUF_CHUNK_SZ 1024
 
 bool control_send(struct site_info *site, char *data);
 int32_t control_recv(struct site_info *site);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "general.h"
+#include "util.h"
 
 #define MAX_PATH_LEN 4096
 #define MAX_FILENAME_LEN 1024

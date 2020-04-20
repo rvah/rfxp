@@ -127,7 +127,7 @@ bool config_read(char *path) {
 		return false;
 	}
 
-	print_site_configs();
+	//print_site_configs();
 
 	return true;
 }

@@ -66,8 +66,6 @@ void cmd_open(char *line, char which) {
 		return;
 	}
 
-	printf("found site %s\n", site_conf->name);
-	
 	struct site_info *s = site_init(
 		site_conf->name,
 		site_conf->host,
@@ -86,25 +84,41 @@ void cmd_open(char *line, char which) {
 	}
 	
 	pthread_create(&s->thread, NULL, thread_site, s);
-	//ftp_connect(pair->left);
-	
-
-	//ftp_connect(pair->right);
 }
 
 /*
 	command args: close <all>
 */
 void cmd_close(char *line, char which) {
-	struct site_pair *pair = site_get_current_pair();
-	
-	if(pair == NULL) {
+	if(which == ' ') {
+		printf("not implemented.\n");
 		return;
 	}
 
-	ftp_disconnect(pair->left);
-	ftp_disconnect(pair->right);
-	site_destroy_pair(pair);
+	struct site_pair *pair = site_get_current_pair();
+
+	struct site_info *s;
+
+	if(which == 'l') {
+		s = pair->left;
+	} else if (which == 'r') {
+		s = pair->right;
+	} else {
+		// not implemented
+	}
+
+	if(s == NULL) {
+		printf("no site connected.\n");
+		return;
+	}
+
+	cmd_execute(s->thread_id, EV_SITE_CLOSE, NULL);
+
+	if(which == 'l') {
+		pair->left = NULL;
+	} else if(which == 'r') {
+		pair->right = NULL;
+	}
 }
 
 //site specific commands

@@ -26,6 +26,7 @@ struct site_info {
 	struct linked_str_node *cmd_list;
 	pthread_t thread;
 	uint32_t thread_id;
+	char *last_recv;
 };
 
 struct site_pair {
@@ -34,6 +35,7 @@ struct site_pair {
 	struct site_info *right;
 };
 
+void site_set_cwd(struct site_info *site, char *cwd);
 struct site_info *site_init(char *name, char *address, char *port, char *username, char *password, bool use_tls);
 struct site_pair *site_get_current_pair();
 void site_destroy_pair(struct site_pair *pair);

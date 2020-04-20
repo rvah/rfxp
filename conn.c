@@ -66,7 +66,17 @@ int32_t __control_recv(struct site_info *site, bool force_plaintext) {
 	char line[CONTROL_LINE_SZ]; // control code + space/dash
 
 	uint32_t code, col_count = 0;
-	int32_t numbytes; 
+	int32_t numbytes;
+	int32_t out_sz = CONTROL_INT_BUF_CHUNK_SZ;
+	int32_t out_cur_ofs = 0;
+
+	if(site->last_recv != NULL) {
+		//free old received data
+		free(site->last_recv);
+	}
+
+	//initial size 4k
+	site->last_recv = malloc(out_sz);
 
 	while((numbytes = read_socket(site, buf, CONTROL_BUF_SZ-1, force_plaintext)) != 0) {
 		if (numbytes == -1) {
@@ -77,17 +87,27 @@ int32_t __control_recv(struct site_info *site, bool force_plaintext) {
 		for(int i = 0; i < numbytes; i++) {
 			line[col_count] = buf[i];
 
+			if( (out_cur_ofs+2) > out_sz) {
+				out_sz += CONTROL_INT_BUF_CHUNK_SZ;
+				site->last_recv = realloc(site->last_recv, out_sz);
+			}
+
+			site->last_recv[out_cur_ofs] = buf[i];
+			out_cur_ofs++;
+
+			//TODO: improve this whole thing
 			if(buf[i] == '\n') {
 				//write line
 				line[col_count+1] = '\0';
 				log_w(line);
 
-				col_count = 0;
-
 				//check if this was last line
 				code = read_code(line);
 
+				col_count = 0;
+
 				if((code != -1) && control_end(line)) {
+					site->last_recv[out_cur_ofs+1] = '\0';
 					return code;
 				}
 
@@ -98,6 +118,7 @@ int32_t __control_recv(struct site_info *site, bool force_plaintext) {
 		}
 	}
 
+	site->last_recv[out_cur_ofs+1] = '\0';
 	return 0;
 }
 
@@ -152,6 +173,7 @@ bool auth(struct site_info *site) {
 	
 	//username failed?
 	if(code != 331) {
+		ftp_disconnect(site);
 		return false;
 	}
 
@@ -162,6 +184,7 @@ bool auth(struct site_info *site) {
 
 	//password fail?
 	if(code != 230) {
+		ftp_disconnect(site);
 		return false;
 	}
 
@@ -177,15 +200,30 @@ bool auth(struct site_info *site) {
 	control_send(site, "PWD\n");
 	code = control_recv(site);
 
+	//didnt get correct pwd reply, indicate bad login
+	if(code != 257) {
+		ftp_disconnect(site);
+		return false;
+	}
+
+	char *pwd = parse_pwd(site->last_recv);
+
+	if(pwd == NULL) {
+		log_w("error parsing pwd\n");
+		ftp_disconnect(site);
+		return false;
+	}
+
+	site_set_cwd(site, pwd);
+
+	log_w("pwd set to %s\n", site->current_working_dir);
+
 	//get initial filelist
 	control_send(site, "STAT -la\n");
 	code = control_recv(site);
 
-	control_send(site, "CWD /\n");
-	code = control_recv(site);
-
-	control_send(site, "STAT -la\n");
-	code = control_recv(site);
+//	control_send(site, "CWD /\n");
+//	code = control_recv(site);
 
 	return true;
 }

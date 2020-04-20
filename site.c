@@ -3,7 +3,7 @@
 struct site_pair *current_pair = NULL;
 
 void site_set_cwd(struct site_info *site, char *cwd) {
-	strlcpy(site->current_working_dir, "/", MAX_PATH_LEN);
+	strlcpy(site->current_working_dir, cwd, MAX_PATH_LEN);
 }
 
 
@@ -17,6 +17,7 @@ struct site_info *site_init(char *name, char *address, char *port, char *usernam
 	strlcpy(site->username, username, SITE_USER_MAX);
 	strlcpy(site->password, password, SITE_PASS_MAX);
 	site->use_tls = use_tls;
+	site->last_recv = NULL;
 
 	site_set_cwd(site, "/");
 

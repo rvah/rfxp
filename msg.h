@@ -6,7 +6,9 @@
 
 #define EV_SITE_LS 1
 #define EV_SITE_CWD 2
-#define EV_UI_LOG 3
+#define EV_SITE_CLOSE 3
+#define EV_UI_LOG 101
+#define EV_UI_RM_SITE 102
 
 struct msg {
 	uint32_t to_id;
