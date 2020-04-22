@@ -8,14 +8,16 @@ uint32_t thread_gen_id() {
 void thread_ui_handle_event(struct msg *m) {
 	struct ui_log *d = m->data;
 
-	int save_rl_point = rl_point;
-	char *save_rl_line = rl_copy_text(0, rl_end);
-	rl_save_prompt();
-	rl_replace_line("", 0);
-	rl_redisplay();
-
 	switch(m->event) {
 	case EV_UI_LOG:
+		usleep(100); //prevent ui bugs
+	
+		int save_rl_point = rl_point;
+		char *save_rl_line = rl_copy_text(0, rl_end);
+		rl_save_prompt();
+		rl_replace_line("", 0);
+		rl_redisplay();
+
 		switch(d->type) {
 			case LOG_T_E:
 				printf(TCOL_RED "[!] " TCOL_RESET);
@@ -68,20 +70,12 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 
 	switch(m->event) {
 	case EV_SITE_LS:
-		control_send(s, "STAT -la\n");
-		code = control_recv(s);
-
-		if(code != 213) {
+		if(!ftp_ls(s)) {
 			log_ui(s->thread_id, LOG_T_E, "Error listing directory\n");
 			break;
 		}
 
-		struct file_item *fl = parse_list(s->last_recv);
-
-		if(fl == NULL) {
-			log_ui(s->thread_id, LOG_T_E, "Error listing directory\n");
-			break;
-		}
+		struct file_item *fl = s->cur_dirlist;
 
 		while(fl != NULL) {
 			switch(fl->file_type) {
@@ -98,7 +92,6 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 
 			fl = fl->next;
 		}
-		//log_ui(s->thread_id, LOG_T_I, "testing ui %d msg\n", 666);
 		break;
 	case EV_SITE_CWD:
 		if(m->data == NULL) {
@@ -110,14 +103,20 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 		char *s_cmd = malloc(cmd_len);
 
 		snprintf(s_cmd, cmd_len, "CWD %s\n", (char *)m->data);
-//		log_w(s_cmd);
 
 		control_send(s, s_cmd);
 		code = control_recv(s);
 
 		if(code != 250) {
 			log_ui(s->thread_id, LOG_T_E, "Error changing directory\n");
+			break;
 		}
+
+		if(!ftp_ls(s)) {
+			log_ui(s->thread_id, LOG_T_E, "Error listing directory\n");
+			break;
+		}
+
 		break;
 	case EV_SITE_CLOSE:
 		ftp_disconnect(s);
@@ -129,9 +128,32 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 			break;
 		}
 
-		if(!ftp_get(s, (char *)m->data)) {
-			log_ui(s->thread_id, LOG_T_E, "File download failed!\n");
+		struct file_item *file = find_file(s->cur_dirlist, (char *)m->data);
+
+		if(file == NULL) {
+			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n", (char *)m->data);
+			break;
 		}
+
+		if(file->file_type == FILE_TYPE_LINK) {
+			log_ui(s->thread_id, LOG_T_W, "%s: no support for downloading symlinks yet\n", (char *)m->data);
+			break;
+		} else if(file->file_type == FILE_TYPE_FILE) {
+			if(!ftp_get(s, (char *)m->data, "./")) {
+				log_ui(s->thread_id, LOG_T_E, "%s: download failed!\n", (char *)m->data);
+				break;
+			}
+		} else if(file->file_type == FILE_TYPE_DIR) {
+			if(!ftp_get_recursive(s, (char *)m->data, "./")) {
+				log_ui(s->thread_id, LOG_T_E, "%s: recursive download failed!\n", (char *)m->data);
+				break;
+			}
+		} else {
+			log_ui(s->thread_id, LOG_T_E, "%s: unknown file type!\n", (char *)m->data);
+			break;
+		}
+
+		log_ui(s->thread_id, LOG_T_I, "%s: download complete\n", (char *)m->data);
 
 		break;
 	}
@@ -155,6 +177,10 @@ void *thread_site(void *ptr) {
 		msg_send(m);
 	} else {
 		log_ui(site->thread_id, LOG_T_I, "Connected to %s\n", site->name);
+	}
+
+	if(!ftp_ls(site)) {
+		log_ui(site->thread_id, LOG_T_E, "Error listing directory\n");
 	}
 
 	//thread main loop

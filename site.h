@@ -28,6 +28,7 @@ struct site_info {
 	uint32_t thread_id;
 	char *last_recv;
 	bool prot_sent;
+	struct file_item *cur_dirlist;
 };
 
 struct site_pair {

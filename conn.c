@@ -55,7 +55,7 @@ bool __control_send(struct site_info *site, char *data, bool force_plaintext) {
 	uint32_t n_sent = 0;
 	uint32_t n = 0;
 
-	log_w(data);
+	log_w("%s",data);
 
 	while(n_sent < len) {
 		n = write_control_socket(site, data+n_sent, len-n_sent, force_plaintext);
@@ -107,7 +107,7 @@ int32_t __control_recv(struct site_info *site, bool force_plaintext) {
 			if(buf[i] == '\n') {
 				//write line
 				line[col_count+1] = '\0';
-				log_w(line);
+				log_w("%s",line);
 
 				//check if this was last line
 				code = read_code(line);
@@ -348,7 +348,7 @@ bool ftp_retr(struct site_info *site, char *filename) {
 	return control_recv(site) == 150;	
 }
 
-bool ftp_get(struct site_info *site, char *filename) {
+bool ftp_get(struct site_info *site, char *filename, char *local_dir) {
 	if(!site->prot_sent) {
 		if(!ftp_prot(site)) {
 			return false;
@@ -398,9 +398,15 @@ bool ftp_get(struct site_info *site, char *filename) {
 		site->data_secure_fd = ssl;
 	}
 
+	//create local path
+	int new_len = strlen(local_dir)+strlen(filename)+2;
+	char *new_lpath = malloc(new_len);
+	strlcpy(new_lpath, local_dir, new_len);
+	strlcat(new_lpath, filename, new_len);
+
 	char buf[DATA_BUF_SZ];
 	int32_t numbytes;
-	FILE *fd = fopen(filename, "wb");
+	FILE *fd = fopen(new_lpath, "wb");
 	
 	if(fd == NULL) {
 		log_w("error opening file for writing\n");
@@ -408,21 +414,115 @@ bool ftp_get(struct site_info *site, char *filename) {
 		return false;
 	}
 
+	bool write_failed = false;
+
 	while((numbytes = read_data_socket(site, buf, DATA_BUF_SZ-1, false)) != 0) {
 		if (numbytes == -1) {
 			log_w("error recv\n");
+			write_failed = true;
 			break;
 		}
 		
-//		for(int i = 0; i < numbytes; i++) {
-		fwrite(buf, sizeof(char), numbytes, fd);
-//		}
+		if(fwrite(buf, sizeof(char), numbytes, fd) != numbytes) {
+			write_failed = true;
+			break;
+		}
 	}
 
 	fclose(fd);
 	close(site->data_socket_fd);
 	printf("recv done");
 
-	return control_recv(site) == 226;
+
+	uint32_t code = control_recv(site);
+
+	if(write_failed) {
+		return false;
+	}
+
+	return code == 226;
 }
 
+bool ftp_ls(struct site_info *site) {
+	control_send(site, "STAT -la\n");
+
+	if(control_recv(site) != 213) {
+		return false;
+	}
+
+	struct file_item *fl = parse_list(site->last_recv);
+
+	if(fl == NULL) {
+		return false;
+	}
+
+	site->cur_dirlist = fl;
+	return true;
+}
+
+bool ftp_cwd(struct site_info *site, char *dirname) {
+	int cmd_len = strlen(dirname) + 6;
+	char *s_cmd = malloc(cmd_len);
+
+	snprintf(s_cmd, cmd_len, "CWD %s\n", dirname);
+
+	control_send(site, s_cmd);
+	free(s_cmd);
+
+	return control_recv(site) == 250;
+
+}
+
+bool ftp_get_recursive(struct site_info *site, char *dirname, char *local_dir) {
+	//cd into dir
+	if(!ftp_cwd(site, dirname)) {
+		return false;
+	}
+
+	int new_len = strlen(local_dir)+strlen(dirname)+2;
+	char *new_lpath = malloc(new_len);
+	strlcpy(new_lpath, local_dir, new_len);
+	strlcat(new_lpath, dirname, new_len);
+	strlcat(new_lpath, "/", new_len);
+	//printf("new: %s\n", new_lpath);
+
+	if(!file_exists(new_lpath)) {
+		log_ui(site->thread_id, LOG_T_I, "%s: creating dir\n", new_lpath);
+		if(mkdir(new_lpath, 0755) != 0) {
+			log_ui(site->thread_id, LOG_T_E, "%s: unable to mkdir!\n", new_lpath);
+			ftp_cwd(site, "..");
+			free(new_lpath);
+			return false;
+		}
+	}
+
+	if(!ftp_ls(site)) {
+		log_ui(site->thread_id, LOG_T_W, "%s: empty dir\n", dirname);
+		ftp_cwd(site, ".."); // go back
+		free(new_lpath);
+		return true;
+	}
+
+	struct file_item *fl = site->cur_dirlist;
+	bool flag_failed = false;
+
+	while(fl != NULL) {
+		if(fl->file_type == FILE_TYPE_FILE) {
+			log_ui(site->thread_id, LOG_T_I, "%s: downloading file..\n", fl->file_name);
+			if(!ftp_get(site, fl->file_name, new_lpath)) {
+				log_ui(site->thread_id, LOG_T_E, "%s: download failed!\n", fl->file_name);
+				flag_failed = true;
+			}
+		} else if(fl->file_type == FILE_TYPE_DIR) {
+			log_ui(site->thread_id, LOG_T_I, "%s: downloading dir..\n", fl->file_name);
+			if(!ftp_get_recursive(site, fl->file_name, new_lpath)) {
+				log_ui(site->thread_id, LOG_T_E, "%s/: download failed!\n", fl->file_name);
+				flag_failed = true;
+			}
+		}
+		fl = fl->next;
+	}	
+	
+	free(new_lpath);
+	return ftp_cwd(site, "..") && !flag_failed;
+}

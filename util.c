@@ -35,3 +35,8 @@ void str_trim(char *s) {
 	str_ltrim(s);
 	str_rtrim(s);
 }
+
+bool file_exists (char *filename) {
+	struct stat buffer;   
+	return (stat(filename, &buffer) == 0);
+}

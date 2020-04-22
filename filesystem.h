@@ -21,6 +21,7 @@ struct file_item {
 	struct file_item *next;
 };
 
+struct file_item *find_file(struct file_item *list, char *filename);
 void print_file_item(struct file_item *item);
 struct file_item *parse_list(char *text_list);
 struct file_item *parse_line(char *line);

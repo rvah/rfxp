@@ -1,5 +1,20 @@
 #include "filesystem.h"
 
+struct file_item *find_file(struct file_item *list, char *filename) {
+	if(list == NULL) {
+		return NULL;
+	}
+
+	while(list != NULL) {
+		if(strcmp(list->file_name, filename) == 0) {
+			return list;
+		}
+		list = list->next;
+	}
+
+	return NULL;
+}
+
 void print_file_item(struct file_item *item) {
 	printf("--- -  ->\n");
 	printf("Type: %d\n", item->file_type);
@@ -108,16 +123,21 @@ struct file_item *parse_line(char *line) {
 		case 7:
 			strlcat(item->date, " ", 13);
 			strlcat(item->date, column, 13);
+			
+			//full name is in saved ptr
+			item->file_name[0] = '\0';
+			strlcat(item->file_name, save, MAX_FILENAME_LEN);
 			break;
 		//name
-		case 8:
-			item->file_name[0] = '\0';
-			strlcat(item->file_name, column, MAX_FILENAME_LEN);
-			break;
-		default:
+		//case 8:
+//			item->file_name[0] = '\0';
+//			strlcat(item->file_name, column, MAX_FILENAME_LEN);
+//			printf("savept: %s\n", save);
+//			break;
+		//default:
 			//add everything else to filename..
-			strlcat(item->file_name, " ", MAX_FILENAME_LEN);
-			strlcat(item->file_name, column, MAX_FILENAME_LEN);
+			//strlcat(item->file_name, " ", MAX_FILENAME_LEN);
+			//strlcat(item->file_name, column, MAX_FILENAME_LEN);
 		}
 
 		column = strtok_r(NULL, " \t", &save);

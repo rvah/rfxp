@@ -29,4 +29,6 @@ int32_t control_recv(struct site_info *site);
 bool ftp_connect(struct site_info *site);
 void ftp_disconnect(struct site_info *site);
 bool ftp_retr(struct site_info *site, char *filename);
-bool ftp_get(struct site_info *site, char *filename);
+bool ftp_get(struct site_info *site, char *filename, char *local_dir);
+bool ftp_ls(struct site_info *site);
+bool ftp_get_recursive(struct site_info *site, char *dirname, char *local_dir);

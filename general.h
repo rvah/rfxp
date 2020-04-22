@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 
 struct linked_str_node {
