@@ -8,6 +8,7 @@
 #define EV_SITE_CWD 2
 #define EV_SITE_CLOSE 3
 #define EV_SITE_GET 4
+#define EV_SITE_PUT 5
 #define EV_UI_LOG 101
 #define EV_UI_RM_SITE 102
 

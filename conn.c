@@ -34,6 +34,14 @@ ssize_t read_data_socket(struct site_info *site, void *buf, size_t len, bool for
 	}
 }
 
+ssize_t write_data_socket(struct site_info *site, const void *buf, size_t len, bool force_plaintext) {
+	if(site->use_tls && !force_plaintext) {
+		return SSL_write(site->data_secure_fd, buf, len);
+	} else {
+		return send(site->data_socket_fd, buf, len, 0);
+	}
+}
+
 ssize_t read_control_socket(struct site_info *site, void *buf, size_t len, bool force_plaintext) {
 	if(site->use_tls && !force_plaintext) {
 		return SSL_read(site->secure_fd, buf, len);
@@ -348,7 +356,19 @@ bool ftp_retr(struct site_info *site, char *filename) {
 	return control_recv(site) == 150;	
 }
 
-bool ftp_get(struct site_info *site, char *filename, char *local_dir) {
+bool ftp_stor(struct site_info *site, char *filename) {
+	int slen = strlen(filename)+8;
+	char *s_retr = malloc(slen);
+
+	snprintf(s_retr, slen, "STOR %s\n", filename);
+	control_send(site, s_retr);
+
+	free(s_retr);
+
+	return control_recv(site) == 150;
+}
+
+bool ftp_open_data(struct site_info *site) {
 	if(!site->prot_sent) {
 		if(!ftp_prot(site)) {
 			return false;
@@ -370,32 +390,48 @@ bool ftp_get(struct site_info *site, char *filename, char *local_dir) {
 		return false;
 	}
 
+	return true;
+}
+
+bool ftp_data_enable_tls(struct site_info *site) {
+	SSL_CTX *ctx = ssl_get_context();
+
+	if(ctx == NULL) {
+		log_w("failed to get SSL context\n");
+		close(site->data_socket_fd);
+		return false;
+	}
+
+	SSL *ssl = SSL_new(ctx);
+	SSL_set_fd(ssl, site->data_socket_fd);
+
+	if(SSL_connect(ssl) == -1) {
+		log_w("TLS FAILED, ERROR:\n");
+		ERR_print_errors_fp(stderr);
+		SSL_CTX_free(ctx);
+		close(site->data_socket_fd);
+		return false;
+	}
+
+	site->data_secure_fd = ssl;
+
+	return true;
+}
+
+bool ftp_get(struct site_info *site, char *filename, char *local_dir) {
+	if(!ftp_open_data(site)) {
+		return false;
+	}
+
 	if(!ftp_retr(site, filename)) {
 		close(site->data_socket_fd);
 		return false;
 	}
 
 	if(site->use_tls) {
-		SSL_CTX *ctx = ssl_get_context();
-
-		if(ctx == NULL) {
-			log_w("failed to get SSL context\n");
-			close(site->data_socket_fd);
+		if(!ftp_data_enable_tls(site)) {
 			return false;
 		}
-
-		SSL *ssl = SSL_new(ctx);
-		SSL_set_fd(ssl, site->data_socket_fd);
-
-		if(SSL_connect(ssl) == -1) {
-			log_w("TLS FAILED, ERROR:\n");
-			ERR_print_errors_fp(stderr);
-			SSL_CTX_free(ctx);
-			close(site->data_socket_fd);
-			return false;
-		}
-
-		site->data_secure_fd = ssl;
 	}
 
 	//create local path
@@ -443,6 +479,89 @@ bool ftp_get(struct site_info *site, char *filename, char *local_dir) {
 	return code == 226;
 }
 
+bool ftp_put(struct site_info *site, char *filename, char *local_dir) {
+	if(!ftp_open_data(site)) {
+		return false;
+	}
+
+	if(!ftp_stor(site, filename)) {
+		close(site->data_socket_fd);
+		return false;
+	}
+
+	if(site->use_tls) {
+		if(!ftp_data_enable_tls(site)) {
+			return false;
+		}
+	}
+
+	//create local path
+	int new_len = strlen(local_dir)+strlen(filename)+2;
+	char *new_lpath = malloc(new_len);
+	strlcpy(new_lpath, local_dir, new_len);
+	strlcat(new_lpath, filename, new_len);
+
+	char buf[DATA_BUF_SZ];
+	FILE *fd = fopen(new_lpath, "rb");
+	free(new_lpath);
+	uint32_t n_sent = 0;
+	uint32_t n = 0;
+	size_t n_read = 0;
+	//long int len;
+	
+	if(fd == NULL) {
+		log_w("error opening file for reading\n");
+		close(site->data_socket_fd);
+		return false;
+	}
+
+	//fseek(fd, 0L, SEEK_END);
+	//len = ftell(fd);
+	//rewind(fd);
+
+	bool reading = true;
+	while(reading) {
+		//read block
+		n_read = fread(buf, 1, DATA_BUF_SZ, fd);
+		n_sent = 0;
+		//data read not expected size
+		if(n_read != DATA_BUF_SZ) {
+			//check if error set or not EOF
+			if( (ferror(fd) != 0) || (feof(fd) == 0) ) {
+				log_w("error reading data\n");
+				fclose(fd);
+				close(site->data_socket_fd);
+				return false;
+			}
+			reading = false;
+		}
+
+		//send block			
+		while(n_sent < n_read) {
+			n = write_data_socket(site, buf+n_sent, n_read-n_sent, false);
+			n_sent += n;
+
+			if(n == -1) {
+				log_w("error writing data\n");
+				fclose(fd);
+				close(site->data_socket_fd);
+				return false;
+			}
+		}
+	}
+
+	if(site->use_tls) {
+		//important to make sure the ssl shutdown has finished before closing sock
+		while(SSL_shutdown(site->data_secure_fd) == 0) {
+		}
+		SSL_free(site->data_secure_fd);
+	}
+
+	fclose(fd);
+	close(site->data_socket_fd);
+	return control_recv(site) == 226;
+}
+
 bool ftp_ls(struct site_info *site) {
 	control_send(site, "STAT -la\n");
 
@@ -474,6 +593,60 @@ bool ftp_cwd(struct site_info *site, char *dirname) {
 }
 
 bool ftp_get_recursive(struct site_info *site, char *dirname, char *local_dir) {
+	//cd into dir
+	if(!ftp_cwd(site, dirname)) {
+		return false;
+	}
+
+	int new_len = strlen(local_dir)+strlen(dirname)+2;
+	char *new_lpath = malloc(new_len);
+	strlcpy(new_lpath, local_dir, new_len);
+	strlcat(new_lpath, dirname, new_len);
+	strlcat(new_lpath, "/", new_len);
+	//printf("new: %s\n", new_lpath);
+
+	if(!file_exists(new_lpath)) {
+		log_ui(site->thread_id, LOG_T_I, "%s: creating dir\n", new_lpath);
+		if(mkdir(new_lpath, 0755) != 0) {
+			log_ui(site->thread_id, LOG_T_E, "%s: unable to mkdir!\n", new_lpath);
+			ftp_cwd(site, "..");
+			free(new_lpath);
+			return false;
+		}
+	}
+
+	if(!ftp_ls(site)) {
+		log_ui(site->thread_id, LOG_T_W, "%s: empty dir\n", dirname);
+		ftp_cwd(site, ".."); // go back
+		free(new_lpath);
+		return true;
+	}
+
+	struct file_item *fl = site->cur_dirlist;
+	bool flag_failed = false;
+
+	while(fl != NULL) {
+		if(fl->file_type == FILE_TYPE_FILE) {
+			log_ui(site->thread_id, LOG_T_I, "%s: downloading file..\n", fl->file_name);
+			if(!ftp_get(site, fl->file_name, new_lpath)) {
+				log_ui(site->thread_id, LOG_T_E, "%s: download failed!\n", fl->file_name);
+				flag_failed = true;
+			}
+		} else if(fl->file_type == FILE_TYPE_DIR) {
+			log_ui(site->thread_id, LOG_T_I, "%s: downloading dir..\n", fl->file_name);
+			if(!ftp_get_recursive(site, fl->file_name, new_lpath)) {
+				log_ui(site->thread_id, LOG_T_E, "%s/: download failed!\n", fl->file_name);
+				flag_failed = true;
+			}
+		}
+		fl = fl->next;
+	}	
+	
+	free(new_lpath);
+	return ftp_cwd(site, "..") && !flag_failed;
+}
+
+bool ftp_put_recursive(struct site_info *site, char *dirname, char *local_dir) {
 	//cd into dir
 	if(!ftp_cwd(site, dirname)) {
 		return false;

@@ -1,5 +1,33 @@
 #include "filesystem.h"
 
+struct file_item *find_local_file(char *path, char *filename) {
+	DIR *dir;
+	struct dirent *ent;
+	struct file_item *item = NULL;
+
+	if ((dir = opendir (path)) != NULL) {
+		while ((ent = readdir (dir)) != NULL) {
+			if( (strlen(ent->d_name) == 0) ||
+				(strcmp(ent->d_name, ".") == 0) || 
+				(strcmp(ent->d_name, "..") == 0)) {
+				continue;
+			}
+
+			if(strcmp(ent->d_name, filename) == 0) {
+				if((ent->d_type == DT_DIR) || (ent->d_type == DT_REG)) {
+					item = malloc(sizeof(struct file_item));
+					strlcat(item->file_name, ent->d_name, MAX_FILENAME_LEN);
+					item->file_type = (ent->d_type == DT_REG) ? FILE_TYPE_FILE : FILE_TYPE_DIR;
+					return item;
+				}
+			}
+		}
+		closedir (dir);
+	}
+
+	return item;
+}
+
 struct file_item *find_file(struct file_item *list, char *filename) {
 	if(list == NULL) {
 		return NULL;

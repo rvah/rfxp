@@ -17,7 +17,7 @@
 #define CONTROL_LINE_SZ 1024
 #define CONTROL_INT_BUF_CHUNK_SZ 1024
 
-#define DATA_BUF_SZ 1024
+#define DATA_BUF_SZ 4096
 
 struct pasv_details {
 	char host[255];
@@ -30,5 +30,7 @@ bool ftp_connect(struct site_info *site);
 void ftp_disconnect(struct site_info *site);
 bool ftp_retr(struct site_info *site, char *filename);
 bool ftp_get(struct site_info *site, char *filename, char *local_dir);
+bool ftp_put(struct site_info *site, char *filename, char *local_dir);
 bool ftp_ls(struct site_info *site);
 bool ftp_get_recursive(struct site_info *site, char *dirname, char *local_dir);
+bool ftp_put_recursive(struct site_info *site, char *dirname, char *local_dir);

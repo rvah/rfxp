@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <dirent.h>
 
 struct linked_str_node {
 	char *str;

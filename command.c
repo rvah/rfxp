@@ -156,7 +156,21 @@ void cmd_cd(char *line, char which) {
 }
 
 void cmd_put(char *line, char which) {
-	printf("put %c\n", which);
+	struct site_info *s = cmd_get_site(which);
+
+	if(s == NULL) {
+		printf("no site connected.\n");
+		return;
+	}
+
+	char *arg_path = get_arg(line, 1);
+
+	if(arg_path == NULL) {
+		bad_arg("put");
+		return;
+	}
+
+	cmd_execute(s->thread_id, EV_SITE_PUT, (void *)arg_path);
 }
 
 void cmd_get(char *line, char which) {

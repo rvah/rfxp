@@ -122,6 +122,43 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 		ftp_disconnect(s);
 		log_ui(s->thread_id, LOG_T_I, "connection closed.\n");
 		break;
+	case EV_SITE_PUT:
+		if(m->data == NULL) {
+			printf("EV_SITE_PUT: bad path\n");
+			break;
+		}
+		struct file_item *local_file = find_local_file("./", (char *)m->data);
+
+		if(local_file == NULL) {
+			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n", (char *)m->data);
+			free(local_file);
+			break;
+		}
+
+		uint32_t filetype = local_file->file_type;
+		free(local_file);
+
+		if(filetype == FILE_TYPE_LINK) {
+			log_ui(s->thread_id, LOG_T_W, "%s: no support for uploading symlinks yet\n", (char *)m->data);
+			break;
+		} else if(filetype == FILE_TYPE_FILE) {
+			if(!ftp_put(s, (char *)m->data, "./")) {
+				log_ui(s->thread_id, LOG_T_E, "%s: upload failed!\n", (char *)m->data);
+				break;
+			}
+		} else if(filetype == FILE_TYPE_DIR) {
+			if(!ftp_put_recursive(s, (char *)m->data, "./")) {
+				log_ui(s->thread_id, LOG_T_E, "%s: recursive upload failed!\n", (char *)m->data);
+				break;
+			}
+		} else {
+			log_ui(s->thread_id, LOG_T_E, "%s: unknown file type!\n", (char *)m->data);
+			break;
+		}
+
+		log_ui(s->thread_id, LOG_T_I, "%s: upload complete\n", (char *)m->data);
+
+		break;
 	case EV_SITE_GET:
 		if(m->data == NULL) {
 			printf("EV_SITE_GET: bad path\n");
