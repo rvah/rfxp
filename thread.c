@@ -127,10 +127,14 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 			printf("EV_SITE_PUT: bad path\n");
 			break;
 		}
-		struct file_item *local_file = find_local_file("./", (char *)m->data);
+		str_rtrim_slash((char *)m->data);
+		char *p_dir = str_get_path((char *)m->data);
+		char *p_filename = str_get_file((char *)m->data);
+		//printf("<<%s>>%s<<", p_dir, p_filename);
+		struct file_item *local_file = find_local_file(p_dir, p_filename);
 
 		if(local_file == NULL) {
-			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n", (char *)m->data);
+			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n", p_filename);
 			free(local_file);
 			break;
 		}
@@ -139,25 +143,26 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 		free(local_file);
 
 		if(filetype == FILE_TYPE_LINK) {
-			log_ui(s->thread_id, LOG_T_W, "%s: no support for uploading symlinks yet\n", (char *)m->data);
+			log_ui(s->thread_id, LOG_T_W, "%s: no support for uploading symlinks yet\n", p_filename);
 			break;
 		} else if(filetype == FILE_TYPE_FILE) {
-			if(!ftp_put(s, (char *)m->data, "./")) {
-				log_ui(s->thread_id, LOG_T_E, "%s: upload failed!\n", (char *)m->data);
+			if(!ftp_put(s, p_filename, p_dir)) {
+				log_ui(s->thread_id, LOG_T_E, "%s: upload failed!\n", p_filename);
 				break;
 			}
 		} else if(filetype == FILE_TYPE_DIR) {
-			if(!ftp_put_recursive(s, (char *)m->data, "./")) {
-				log_ui(s->thread_id, LOG_T_E, "%s: recursive upload failed!\n", (char *)m->data);
+			if(!ftp_put_recursive(s, p_filename, p_dir)) {
+				log_ui(s->thread_id, LOG_T_E, "%s: recursive upload failed!\n", p_filename);
 				break;
 			}
 		} else {
-			log_ui(s->thread_id, LOG_T_E, "%s: unknown file type!\n", (char *)m->data);
+			log_ui(s->thread_id, LOG_T_E, "%s: unknown file type!\n", p_filename);
 			break;
 		}
 
-		log_ui(s->thread_id, LOG_T_I, "%s: upload complete\n", (char *)m->data);
-
+		log_ui(s->thread_id, LOG_T_I, "%s: upload complete\n", p_filename);
+		free(p_dir);
+		free(p_filename);
 		break;
 	case EV_SITE_GET:
 		if(m->data == NULL) {
@@ -165,6 +170,7 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 			break;
 		}
 
+		str_rtrim_slash((char *)m->data);
 		struct file_item *file = find_file(s->cur_dirlist, (char *)m->data);
 
 		if(file == NULL) {

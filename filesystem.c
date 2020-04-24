@@ -16,7 +16,7 @@ struct file_item *find_local_file(char *path, char *filename) {
 			if(strcmp(ent->d_name, filename) == 0) {
 				if((ent->d_type == DT_DIR) || (ent->d_type == DT_REG)) {
 					item = malloc(sizeof(struct file_item));
-					strlcat(item->file_name, ent->d_name, MAX_FILENAME_LEN);
+					strlcpy(item->file_name, ent->d_name, MAX_FILENAME_LEN);
 					item->file_type = (ent->d_type == DT_REG) ? FILE_TYPE_FILE : FILE_TYPE_DIR;
 					return item;
 				}
@@ -26,6 +26,38 @@ struct file_item *find_local_file(char *path, char *filename) {
 	}
 
 	return item;
+}
+
+struct file_item *local_ls(char *path) {
+	DIR *dir;
+	struct dirent *ent;
+	struct file_item *list = NULL;
+	struct file_item *item = NULL;
+
+	if ((dir = opendir (path)) != NULL) {
+		while ((ent = readdir (dir)) != NULL) {
+			if( (strlen(ent->d_name) == 0) ||
+				(strcmp(ent->d_name, ".") == 0) ||
+				(strcmp(ent->d_name, "..") == 0)) {
+				continue;
+			}
+
+			if((ent->d_type == DT_DIR) || (ent->d_type == DT_REG)) {
+				item = malloc(sizeof(struct file_item));
+				strlcpy(item->file_name, ent->d_name, MAX_FILENAME_LEN);
+				item->file_type = (ent->d_type == DT_REG) ? FILE_TYPE_FILE : FILE_TYPE_DIR;
+
+				if(list == NULL) {
+					list = item;
+				} else {
+					item->next = list;
+					list = item;
+				}
+			}
+		}
+	}
+
+	return list;
 }
 
 struct file_item *find_file(struct file_item *list, char *filename) {
@@ -156,16 +188,6 @@ struct file_item *parse_line(char *line) {
 			item->file_name[0] = '\0';
 			strlcat(item->file_name, save, MAX_FILENAME_LEN);
 			break;
-		//name
-		//case 8:
-//			item->file_name[0] = '\0';
-//			strlcat(item->file_name, column, MAX_FILENAME_LEN);
-//			printf("savept: %s\n", save);
-//			break;
-		//default:
-			//add everything else to filename..
-			//strlcat(item->file_name, " ", MAX_FILENAME_LEN);
-			//strlcat(item->file_name, column, MAX_FILENAME_LEN);
 		}
 
 		column = strtok_r(NULL, " \t", &save);

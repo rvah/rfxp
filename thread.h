@@ -8,6 +8,7 @@
 #include "log.h"
 #include "colors.h"
 #include "filesystem.h"
+#include "util.h"
 
 void *thread_ui(void *ptr);
 void *thread_site(void *ptr);

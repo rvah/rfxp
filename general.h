@@ -11,6 +11,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <libgen.h>
+#include <wordexp.h>
 
 struct linked_str_node {
 	char *str;

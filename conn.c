@@ -465,10 +465,15 @@ bool ftp_get(struct site_info *site, char *filename, char *local_dir) {
 		}
 	}
 
+	if(site->use_tls) {
+		//important to make sure the ssl shutdown has finished before closing sock
+		while(SSL_shutdown(site->data_secure_fd) == 0) {
+		}
+		SSL_free(site->data_secure_fd);
+	}
+
 	fclose(fd);
 	close(site->data_socket_fd);
-	printf("recv done");
-
 
 	uint32_t code = control_recv(site);
 
@@ -571,9 +576,9 @@ bool ftp_ls(struct site_info *site) {
 
 	struct file_item *fl = parse_list(site->last_recv);
 
-	if(fl == NULL) {
-		return false;
-	}
+	//if(fl == NULL) {
+	//	return false;
+	//}
 
 	site->cur_dirlist = fl;
 	return true;
@@ -590,6 +595,18 @@ bool ftp_cwd(struct site_info *site, char *dirname) {
 
 	return control_recv(site) == 250;
 
+}
+
+bool ftp_mkd(struct site_info *site, char *dirname) {
+	int cmd_len = strlen(dirname) + 6;
+	char *s_cmd = malloc(cmd_len);
+
+	snprintf(s_cmd, cmd_len, "MKD %s\n", dirname);
+
+	control_send(site, s_cmd);
+	free(s_cmd);
+
+	return control_recv(site) == 257;
 }
 
 bool ftp_get_recursive(struct site_info *site, char *dirname, char *local_dir) {
@@ -610,14 +627,21 @@ bool ftp_get_recursive(struct site_info *site, char *dirname, char *local_dir) {
 		if(mkdir(new_lpath, 0755) != 0) {
 			log_ui(site->thread_id, LOG_T_E, "%s: unable to mkdir!\n", new_lpath);
 			ftp_cwd(site, "..");
+			ftp_ls(site);
 			free(new_lpath);
 			return false;
 		}
 	}
 
 	if(!ftp_ls(site)) {
+		log_ui(site->thread_id, LOG_T_E, "%s: unable to get dirlist!\n", dirname);
+		return false;
+	}
+
+	if(site->cur_dirlist == NULL) {
 		log_ui(site->thread_id, LOG_T_W, "%s: empty dir\n", dirname);
 		ftp_cwd(site, ".."); // go back
+		ftp_ls(site);
 		free(new_lpath);
 		return true;
 	}
@@ -643,59 +667,74 @@ bool ftp_get_recursive(struct site_info *site, char *dirname, char *local_dir) {
 	}	
 	
 	free(new_lpath);
-	return ftp_cwd(site, "..") && !flag_failed;
+	return ftp_cwd(site, "..") && ftp_ls(site) && !flag_failed;
 }
 
 bool ftp_put_recursive(struct site_info *site, char *dirname, char *local_dir) {
-	//cd into dir
-	if(!ftp_cwd(site, dirname)) {
-		return false;
-	}
-
 	int new_len = strlen(local_dir)+strlen(dirname)+2;
 	char *new_lpath = malloc(new_len);
 	strlcpy(new_lpath, local_dir, new_len);
 	strlcat(new_lpath, dirname, new_len);
 	strlcat(new_lpath, "/", new_len);
-	//printf("new: %s\n", new_lpath);
+	//printf("new: %s\n", new_lpath);return false;
 
-	if(!file_exists(new_lpath)) {
-		log_ui(site->thread_id, LOG_T_I, "%s: creating dir\n", new_lpath);
-		if(mkdir(new_lpath, 0755) != 0) {
-			log_ui(site->thread_id, LOG_T_E, "%s: unable to mkdir!\n", new_lpath);
-			ftp_cwd(site, "..");
-			free(new_lpath);
-			return false;
+	struct file_item *rfile = find_file(site->cur_dirlist, dirname);
+
+	if(rfile == NULL) {
+		if(!ftp_mkd(site, dirname)) {
+			log_ui(site->thread_id, LOG_T_E, "%s: mkdir failed!\n", dirname);
 		}
+	} else if(rfile->file_type != FILE_TYPE_DIR) {
+		log_ui(site->thread_id, LOG_T_E, "%s: remote file not a directory!\n", dirname);
+		return false;
+	}
+
+	if(!ftp_cwd(site, dirname)) {
+		return false;
 	}
 
 	if(!ftp_ls(site)) {
+		return false;
+	}
+
+	struct file_item *l_list = local_ls(new_lpath);
+	struct file_item *lp = l_list;
+
+
+	if(lp == NULL) {
 		log_ui(site->thread_id, LOG_T_W, "%s: empty dir\n", dirname);
-		ftp_cwd(site, ".."); // go back
-		free(new_lpath);
 		return true;
 	}
 
-	struct file_item *fl = site->cur_dirlist;
 	bool flag_failed = false;
 
-	while(fl != NULL) {
-		if(fl->file_type == FILE_TYPE_FILE) {
-			log_ui(site->thread_id, LOG_T_I, "%s: downloading file..\n", fl->file_name);
-			if(!ftp_get(site, fl->file_name, new_lpath)) {
-				log_ui(site->thread_id, LOG_T_E, "%s: download failed!\n", fl->file_name);
+	while(lp != NULL) {
+		//log_ui(site->thread_id, LOG_T_I, ">>%s<<%s>>%s<<\n", local_dir, dirname,lp->file_name);
+		if(lp->file_type == FILE_TYPE_FILE) {
+			log_ui(site->thread_id, LOG_T_I, "%s: uploading file..\n", lp->file_name);
+			if(!ftp_put(site, lp->file_name, new_lpath)) {
+				log_ui(site->thread_id, LOG_T_E, "%s: upload failed!\n", lp->file_name);
 				flag_failed = true;
 			}
-		} else if(fl->file_type == FILE_TYPE_DIR) {
-			log_ui(site->thread_id, LOG_T_I, "%s: downloading dir..\n", fl->file_name);
-			if(!ftp_get_recursive(site, fl->file_name, new_lpath)) {
-				log_ui(site->thread_id, LOG_T_E, "%s/: download failed!\n", fl->file_name);
+		} else if(lp->file_type == FILE_TYPE_DIR) {
+			log_ui(site->thread_id, LOG_T_I, "%s: uploading dir..\n", lp->file_name);
+			if(!ftp_put_recursive(site, lp->file_name, new_lpath)) {
+				log_ui(site->thread_id, LOG_T_E, "%s/: upload failed!\n", lp->file_name);
 				flag_failed = true;
 			}
 		}
-		fl = fl->next;
-	}	
-	
+
+		lp = lp->next;
+	}
+
 	free(new_lpath);
-	return ftp_cwd(site, "..") && !flag_failed;
+
+	//free dir data
+	while(l_list != NULL) {
+		lp = l_list;
+		l_list = l_list->next;
+		free(lp);
+	}
+
+	return ftp_cwd(site, "..") && ftp_ls(site) && !flag_failed;
 }
