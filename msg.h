@@ -9,6 +9,11 @@
 #define EV_SITE_CLOSE 3
 #define EV_SITE_GET 4
 #define EV_SITE_PUT 5
+#define EV_SITE_FXP 6
+#define EV_SITE_RM 7
+#define EV_SITE_SITE 8
+#define EV_SITE_QUOTE 9
+#define EV_SITE_MKDIR 10
 #define EV_UI_LOG 101
 #define EV_UI_RM_SITE 102
 
@@ -22,6 +27,7 @@ struct msg {
 };
 
 bool msg_init();
+bool msg_q_empty();
 void msg_print_q();
 void msg_send(struct msg *msg);
 struct msg *msg_read(uint32_t id);

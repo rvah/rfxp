@@ -1,5 +1,11 @@
 #include "thread.h"
 
+void *thread_indicator(void *ptr) {
+	indicator_start();
+
+	return 0;
+}
+
 uint32_t thread_gen_id() {
 	static uint32_t id = 1;
 	return id++;
@@ -12,7 +18,6 @@ void thread_ui_handle_event(struct msg *m) {
 	case EV_UI_LOG:
 		usleep(100); //prevent ui bugs
 	
-		int save_rl_point = rl_point;
 		char *save_rl_line = rl_copy_text(0, rl_end);
 		rl_save_prompt();
 		rl_replace_line("", 0);
@@ -34,7 +39,6 @@ void thread_ui_handle_event(struct msg *m) {
 
 		rl_restore_prompt();
 		rl_replace_line(save_rl_line, 0);
-		rl_point = save_rl_point;
 		rl_redisplay();
 		free(save_rl_line);
 		break;
@@ -47,6 +51,11 @@ void thread_ui_handle_event(struct msg *m) {
 		if((pair->right != NULL) && (pair->right->thread_id == m->from_id)) {
 			pair->right = NULL;
 		}
+
+		char *s_prefix = generate_ui_prompt(' ', ' ');
+		rl_set_prompt(s_prefix);
+		rl_redisplay();
+		free(s_prefix);
 
 		break;
 	}
@@ -66,29 +75,38 @@ void *thread_ui(void *ptr) {
 }
 
 void thread_site_handle_event(struct msg *m, struct site_info *s) {
-	int32_t code;
-
 	switch(m->event) {
 	case EV_SITE_LS:
-		if(!ftp_ls(s)) {
+		if(!s->ls_do_cache && !ftp_ls(s)) {
 			log_ui(s->thread_id, LOG_T_E, "Error listing directory\n");
 			break;
 		}
 
 		struct file_item *fl = s->cur_dirlist;
-
+		log_ui(s->thread_id, LOG_T_I, TCOL_GREEN "[%s]:\n" TCOL_RESET, s->current_working_dir);
 		while(fl != NULL) {
-			switch(fl->file_type) {
-			case FILE_TYPE_FILE:
-				log_ui(s->thread_id, LOG_T_I, TCOL_PINK "%s\n" TCOL_RESET, fl->file_name);
-				break;
-			case FILE_TYPE_DIR:
-				log_ui(s->thread_id, LOG_T_I, TCOL_GREEN "%s/\n" TCOL_RESET, fl->file_name);
-				break;
-			case FILE_TYPE_LINK:
-				log_ui(s->thread_id, LOG_T_I, TCOL_CYAN "%s\n" TCOL_RESET, fl->file_name);
-				break;
+
+			//TODO: clean up
+			char *f_size = parse_file_size(fl->size);
+			if(fl->skip) {
+				log_ui(s->thread_id, LOG_T_I, TCOL_RED "%5s %s\n" TCOL_RESET, f_size, fl->file_name);
+			} else if(fl->hilight) {
+				log_ui(s->thread_id, LOG_T_I, TCOL_YELLOW "%5s %s\n" TCOL_RESET, f_size, fl->file_name);
+			} else {
+				switch(fl->file_type) {
+				case FILE_TYPE_FILE:
+					log_ui(s->thread_id, LOG_T_I, TCOL_PINK "%5s %s\n" TCOL_RESET, f_size, fl->file_name);
+					break;
+				case FILE_TYPE_DIR:
+					log_ui(s->thread_id, LOG_T_I, TCOL_GREEN "%5s %s/\n" TCOL_RESET, f_size, fl->file_name);
+					break;
+				case FILE_TYPE_LINK:
+					log_ui(s->thread_id, LOG_T_I, TCOL_CYAN "%5s %s\n" TCOL_RESET, f_size, fl->file_name);
+					break;
+				}
 			}
+
+			free(f_size);
 
 			fl = fl->next;
 		}
@@ -99,15 +117,16 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 			break;
 		}
 
-		int cmd_len = strlen((char *)m->data) + 6;
+		/*int cmd_len = strlen((char *)m->data) + 7;
 		char *s_cmd = malloc(cmd_len);
 
-		snprintf(s_cmd, cmd_len, "CWD %s\n", (char *)m->data);
+		snprintf(s_cmd, cmd_len, "CWD %s\r\n", (char *)m->data);
 
 		control_send(s, s_cmd);
 		code = control_recv(s);
 
-		if(code != 250) {
+		if(code != 250) {*/
+		if(!ftp_cwd(s, (char *)m->data)) {
 			log_ui(s->thread_id, LOG_T_E, "Error changing directory\n");
 			break;
 		}
@@ -116,6 +135,9 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 			log_ui(s->thread_id, LOG_T_E, "Error listing directory\n");
 			break;
 		}
+
+		//flag to just read cache for next ls cmd
+		s->ls_do_cache = true;
 
 		break;
 	case EV_SITE_CLOSE:
@@ -146,12 +168,12 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 			log_ui(s->thread_id, LOG_T_W, "%s: no support for uploading symlinks yet\n", p_filename);
 			break;
 		} else if(filetype == FILE_TYPE_FILE) {
-			if(!ftp_put(s, p_filename, p_dir)) {
+			if(!ftp_put(s, p_filename, p_dir, s->current_working_dir)) {
 				log_ui(s->thread_id, LOG_T_E, "%s: upload failed!\n", p_filename);
 				break;
 			}
 		} else if(filetype == FILE_TYPE_DIR) {
-			if(!ftp_put_recursive(s, p_filename, p_dir)) {
+			if(!ftp_put_recursive(s, p_filename, p_dir, s->current_working_dir)) {
 				log_ui(s->thread_id, LOG_T_E, "%s: recursive upload failed!\n", p_filename);
 				break;
 			}
@@ -182,12 +204,12 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 			log_ui(s->thread_id, LOG_T_W, "%s: no support for downloading symlinks yet\n", (char *)m->data);
 			break;
 		} else if(file->file_type == FILE_TYPE_FILE) {
-			if(!ftp_get(s, (char *)m->data, "./")) {
+			if(!ftp_get(s, (char *)m->data, "./", s->current_working_dir)) {
 				log_ui(s->thread_id, LOG_T_E, "%s: download failed!\n", (char *)m->data);
 				break;
 			}
 		} else if(file->file_type == FILE_TYPE_DIR) {
-			if(!ftp_get_recursive(s, (char *)m->data, "./")) {
+			if(!ftp_get_recursive(s, (char *)m->data, "./", s->current_working_dir)) {
 				log_ui(s->thread_id, LOG_T_E, "%s: recursive download failed!\n", (char *)m->data);
 				break;
 			}
@@ -199,6 +221,142 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 		log_ui(s->thread_id, LOG_T_I, "%s: download complete\n", (char *)m->data);
 
 		break;
+
+	case EV_SITE_FXP: ;
+		struct fxp_arg *farg = (struct fxp_arg*)m->data;
+
+		if(farg->filename == NULL) {
+			printf("EV_SITE_GET: bad path\n");
+			break;
+		}
+
+		str_rtrim_slash(farg->filename);
+		struct file_item *fxp_file = find_file(s->cur_dirlist, farg->filename);
+
+		if(fxp_file == NULL) {
+			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n", farg->filename);
+			break;
+		}
+
+		if(fxp_file->file_type == FILE_TYPE_LINK) {
+			log_ui(s->thread_id, LOG_T_W, "%s: no support for fxping symlinks yet\n", farg->filename);
+			break;
+		} else if(fxp_file->file_type == FILE_TYPE_FILE) {
+			if(!fxp(s, farg->dst, farg->filename, s->current_working_dir, farg->dst->current_working_dir)) {
+				log_ui(s->thread_id, LOG_T_E, "%s: fxp failed!\n", farg->filename);
+				break;
+			}
+		} else if(fxp_file->file_type == FILE_TYPE_DIR) {
+			if(!fxp_recursive(s, farg->dst, farg->filename, s->current_working_dir, farg->dst->current_working_dir)) {
+				log_ui(s->thread_id, LOG_T_E, "%s: recursive fxp failed!\n", farg->filename);
+				break;
+			}
+		} else {
+			log_ui(s->thread_id, LOG_T_E, "%s: unknown file type!\n", farg->filename);
+			break;
+		}
+
+		log_ui(s->thread_id, LOG_T_I, "%s: fxp complete\n", farg->filename);
+
+		free(farg);
+		break;
+	case EV_SITE_RM:
+		if(m->data == NULL) {
+			printf("EV_SITE_PUT: bad path\n");
+			break;
+		}
+
+		str_rtrim_slash((char *)m->data);
+		struct file_item *rm_file = find_file(s->cur_dirlist, (char *)m->data);
+                                                                              
+		if(rm_file == NULL) {
+			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n", (char *)m->data);
+			break;
+		}
+
+		if(rm_file->file_type == FILE_TYPE_LINK) {
+			log_ui(s->thread_id, LOG_T_W, "%s: no support for deleting symlinks yet\n", (char *)m->data);
+		} else if(rm_file->file_type == FILE_TYPE_FILE) {
+			int del_len = strlen((char *)m->data) + 8;
+			char *s_del = malloc(del_len);
+
+			snprintf(s_del, del_len, "DELE %s\r\n", (char *)m->data);
+
+			control_send(s, s_del);
+
+			if(control_recv(s) != 250) {
+				log_ui(s->thread_id, LOG_T_E, "%s: error deleting file!\n", (char *)m->data);
+			} else {
+				log_ui(s->thread_id, LOG_T_I, "%s: file has been deleted!\n", (char *)m->data);
+			}
+
+			free(s_del);
+		} else if(rm_file->file_type == FILE_TYPE_DIR) {
+			int rmd_len = strlen((char *)m->data) + 7;
+			char *s_rmd = malloc(rmd_len);
+
+			snprintf(s_rmd, rmd_len, "RMD %s\r\n", (char *)m->data);
+
+			control_send(s, s_rmd);
+
+			if(control_recv(s) != 250) {
+				log_ui(s->thread_id, LOG_T_E, "%s: error deleting directory!\n", (char *)m->data);
+			} else {
+				log_ui(s->thread_id, LOG_T_I, "%s: directory has been deleted!\n", (char *)m->data);
+			}
+
+			free(s_rmd);
+		}
+		break;
+	case EV_SITE_SITE:
+		if(m->data == NULL) {
+			printf("EV_SITE_SITE: no command specified.\n");
+			break;
+		}
+
+		int site_len = strlen((char *)m->data) + 8;
+		char *s_site = malloc(site_len);
+		snprintf(s_site, site_len, "SITE %s\r\n", (char *)m->data);
+		
+		control_send(s, s_site);	
+    	control_recv(s);
+
+		log_ui(s->thread_id, LOG_T_I, "SITE Response:\n%s", s->last_recv);
+		break;
+
+	case EV_SITE_QUOTE:
+		if(m->data == NULL) {
+			printf("EV_SITE_QUOTE: no command specified.\n");
+			break;
+		}
+
+		int qt_len = strlen((char *)m->data) + 3;
+		char *s_qt = malloc(qt_len);
+		snprintf(s_qt, qt_len, "%s\r\n", (char *)m->data);
+		
+		control_send(s, s_qt);	
+    	control_recv(s);
+
+		log_ui(s->thread_id, LOG_T_I, "Raw response:\n%s", s->last_recv);
+		break;
+
+	case EV_SITE_MKDIR:
+		if(m->data == NULL) {
+			printf("EV_SITE_MKDIR: no dir specified.\n");
+			break;
+		}
+
+		if(ftp_mkd(s, (char *)m->data)) {
+			log_ui(s->thread_id, LOG_T_I, "%s: dir created\n", (char *)m->data);
+		} else {
+			log_ui(s->thread_id, LOG_T_E, "%s: error creating dir\n", (char *)m->data);
+		}
+		break;
+	}
+
+	//always invalidate the ls cache after a non cwd cmd
+	if(m->event != EV_SITE_CWD) {
+		s->ls_do_cache = false;
 	}
 
 	//rm message since not needed anymore
@@ -212,19 +370,21 @@ void *thread_site(void *ptr) {
 
 	if(!ftp_connect(site)) {
 		log_ui(site->thread_id, LOG_T_E, "Unable to connect to %s\n", site->name);
-
 		struct msg *m = malloc(sizeof(struct msg));
 		m->to_id = THREAD_ID_UI;
 		m->from_id = site->thread_id;
 		m->event = EV_UI_RM_SITE;
 		msg_send(m);
+
+		return 0;
 	} else {
+		site->ls_do_cache = true;
 		log_ui(site->thread_id, LOG_T_I, "Connected to %s\n", site->name);
 	}
 
-	if(!ftp_ls(site)) {
-		log_ui(site->thread_id, LOG_T_E, "Error listing directory\n");
-	}
+	//if(!ftp_ls(site)) {
+	//	log_ui(site->thread_id, LOG_T_E, "Error listing directory\n");
+	//}
 
 	//thread main loop
 	while(1) {

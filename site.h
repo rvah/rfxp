@@ -29,6 +29,12 @@ struct site_info {
 	char *last_recv;
 	bool prot_sent;
 	struct file_item *cur_dirlist;
+	bool busy;
+	double current_speed;
+	bool ls_do_cache;
+	bool enable_sscn;
+	bool sscn_on;
+	bool enforce_sscn_server_mode;
 };
 
 struct site_pair {
@@ -37,6 +43,8 @@ struct site_pair {
 	struct site_info *right;
 };
 
+void site_busy(struct site_info *site);
+void site_idle(struct site_info *site);
 void site_set_cwd(struct site_info *site, char *cwd);
 struct site_info *site_init(char *name, char *address, char *port, char *username, char *password, bool use_tls);
 struct site_pair *site_get_current_pair();

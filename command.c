@@ -19,6 +19,17 @@ char *get_arg(char *line, int i) {
 	return arg;
 }
 
+char *get_arg_full(char *line, int i) {
+	char *save;
+	strtok_r(strdup(line), " \t", &save);
+
+	for(int j = 0; j < (i-1); j++) {
+		strtok_r(NULL, " \t", &save);
+	}
+
+	return save;
+}
+
 void bad_arg(char *cmd) {
 	printf("bad arg\n");
 }
@@ -191,13 +202,98 @@ void cmd_get(char *line, char which) {
 }
 
 void cmd_rm(char *line, char which) {
-	printf("rm %c\n", which);
+	struct site_info *s = cmd_get_site(which);
+
+	if(s == NULL) {
+		printf("no site connected.\n");
+		return;
+	}
+
+	char *arg_path = get_arg(line, 1);
+
+	if(arg_path == NULL) {
+		bad_arg("rm");
+		return;
+	}
+
+	cmd_execute(s->thread_id, EV_SITE_RM, (void *)arg_path);
 }
 
 void cmd_site(char *line, char which) {
-	printf("site %c\n", which);
+	struct site_info *s = cmd_get_site(which);
+
+	if(s == NULL) {
+		printf("no site connected.\n");
+		return;
+	}
+
+	char *arg = get_arg_full(line, 1);
+	cmd_execute(s->thread_id, EV_SITE_SITE, (void *)arg);
 }
 
 void cmd_quote(char *line, char which) {
-	printf("quote %c\n", which);
+	struct site_info *s = cmd_get_site(which);
+
+	if(s == NULL) {
+		printf("no site connected.\n");
+		return;
+	}
+
+	char *arg = get_arg_full(line, 1);
+	cmd_execute(s->thread_id, EV_SITE_QUOTE, (void *)arg);
+}
+
+void cmd_fxp(char *line, char which) {
+	struct site_info *s = NULL;
+	struct site_info *d = NULL; 
+
+	struct site_pair *pair = site_get_current_pair();
+
+	if(which == 'l') {
+		s = pair->left;
+		d = pair->right;
+	} else {
+		s = pair->right;
+		d = pair->left;
+	}
+
+
+	if(s == NULL) {
+		printf("src site not connected.\n");
+		return;
+	}
+
+	if(d == NULL) {
+		printf("dst site not connected.\n");
+		return;
+	}
+
+	char *arg_path = get_arg(line, 1);
+	
+	if(arg_path == NULL) {
+		bad_arg("fxp");
+		return;
+	}
+
+	struct fxp_arg *fa = malloc(sizeof(struct fxp_arg));
+	fa->filename = arg_path;
+	fa->dst = d;
+
+	cmd_execute(s->thread_id, EV_SITE_FXP, (void*)fa);
+}
+
+void cmd_mkdir(char *line, char which) {
+	struct site_info *s = cmd_get_site(which);
+
+	if(s == NULL) {
+		printf("no site connected.\n");
+		return;
+	}
+
+	char *arg = get_arg_full(line, 1);
+	cmd_execute(s->thread_id, EV_SITE_MKDIR, (void *)arg);
+}
+
+void cmd_quit(char *line, char which) {
+	exit(0);
 }

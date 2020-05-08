@@ -7,6 +7,28 @@
 #include "config.h"
 #include "msg.h"
 #include "log.h"
+#include "skiplist.h"
+
+void show_logo() {
+	printf(TCOL_RED "                                   .------.                                         \n" TCOL_RESET);
+	printf(TCOL_RED "        __  ____   _   __________>>>.MFXP.<<<__________   _   ____  __              \n" TCOL_RESET);
+	printf(TCOL_RED "        \\//.\\  // / \\\\ \\  _ ___  \\__  __  __/  ___ _  / // \\ \\\\  /.\\\\/   \n" TCOL_RESET);
+	printf(TCOL_RED "       .______// /   \\\\ \\     /   \\\\\\ \\/ ///   \\     / //   \\ \\\\_______. \n" TCOL_RESET);
+	printf(TCOL_RED "       |        /________\\___/   .\\\\\\\\/\\////.   \\___/________\\         |    \n" TCOL_RESET);
+	printf(TCOL_RED "       :  .______.___________________   _______.     _____________     :            \n" TCOL_RESET);
+	printf(TCOL_RED "         _|      |       \\__    ____/___\\      |_____\\__________  \\_   .        \n" TCOL_RESET);
+	printf(TCOL_RED "       . \\_    _   /    . | .  ________/       /     _|  .     /   /\\             \n" TCOL_RESET);
+	printf(TCOL_RED "       .  |     \\_/       | .  \\      |\\_    _/      \\_  .  ______/  \\ .       \n" TCOL_RESET);
+	printf(TCOL_RED "       :  |      |      : | ::. \\     | /    \\       . | :.      |\\  / .         \n" TCOL_RESET);
+	printf(TCOL_RED "       |  |______|    .:: l______\\    |/______\\  . .:: l____\\    | \\/  :        \n" TCOL_RESET);
+	printf(TCOL_RED "       :  .\\      \\_______|\\      \\___l \\      \\_______|\\    \\___| |:  .    \n" TCOL_RESET);
+	printf(TCOL_RED "       ..:::\\______\\      \\ \\______\\   \\ \\______\\      \\ \\____\\  \\ |::.:\n" TCOL_RESET);
+	printf(TCOL_RED "       . <==========\\______\\/=======\\___\\/=======\\______\\/=====\\__\\|=> .    \n" TCOL_RESET);
+	printf(TCOL_RED "       .   _ __ ___ ___ _______        _        _______ ____ ___ __ _  .            \n" TCOL_RESET);
+	printf(TCOL_RED "       |____________  / \\     //    .// \\\\.    \\\\     / \\  ____________|      \n" TCOL_RESET);
+	printf(TCOL_RED "                 bHe\\//. \\   ///.  __/   \\__  .\\\\\\   / .\\\\/sE!              \n" TCOL_RESET);
+	printf(TCOL_RED "                          \\_______/         \\_______/                             \n\n" TCOL_RESET);
+}
 
 void init() {
 	log_init();
@@ -22,6 +44,7 @@ void destroy() {
 }
 
 int32_t main( int32_t argc, char **argv ) {
+	show_logo();
 	init();
 	ui_init();
 	ui_loop();

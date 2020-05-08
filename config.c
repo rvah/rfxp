@@ -96,6 +96,7 @@ static int ini_read_handler(void* user, const char* section, const char* name, c
 		if(s == NULL) {
 			s = malloc(sizeof(struct site_config));
 			s->id = id;
+			s->next = NULL;
 			add_site_config(s);
 		}
 		
@@ -115,6 +116,23 @@ static int ini_read_handler(void* user, const char* section, const char* name, c
 			return 0;
 		}
 		
+	} else if(strcmp(s_name, "general") == 0) {
+		if(strcmp(name, "skiplist") == 0) {
+			if(!skiplist_init(value)) {
+				printf("failed to init skiplist.\n");
+				return 0;
+			}
+		} else if(strcmp(name, "priolist") == 0) {
+			if(!priolist_init(value)) {
+				printf("failed to init priolist.\n");
+				return 0;
+			}
+		} else if(strcmp(name, "hilight") == 0) {
+			if(!hilight_init(value)) {
+				printf("failed to init hilight.\n");
+				return 0;
+			}
+		}
 	}
 
 	return 1;

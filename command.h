@@ -19,3 +19,6 @@ void cmd_get(char *line, char which);
 void cmd_rm(char *line, char which);
 void cmd_site(char *line, char which);
 void cmd_quote(char *line, char which);
+void cmd_fxp(char *line, char which);
+void cmd_mkdir(char *line, char which);
+void cmd_quit(char *line, char which);

@@ -13,6 +13,7 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <wordexp.h>
+#include <sys/time.h>
 
 struct linked_str_node {
 	char *str;

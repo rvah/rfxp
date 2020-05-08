@@ -28,6 +28,9 @@ char *commands[] = {
 	"lsite","rsite",
 	"lquote","rquote",
 	"lopen","ropen",
+	"lfxp","rfxp",
+	"lmkdir","rmkdir",
+	"quit","exit",
 	NULL
 };
 
@@ -44,6 +47,54 @@ char *command_name_generator(const char *text, int state) {
 	while ((name = commands[list_index++])) {
 		if (strncmp(name, text, len) == 0) {
 			return strdup(name);
+		}
+	}
+
+	return NULL;
+}
+
+char *command_arg_generator(const char *text, int state) {
+	static struct file_item *cur = NULL;
+	static int len;
+	if(!state) {
+		if(rl_line_buffer == NULL) {
+			return NULL;
+		}
+
+		len = strlen(text);
+
+		char *t = strdup(rl_line_buffer);
+		str_ltrim(t);
+
+		struct site_pair *pair = site_get_current_pair();
+		struct site_info *s = NULL;
+
+		if(t[0] == 'l') {
+			s = pair->left;
+		} else if(t[0] == 'r'){
+			s = pair->right;
+		}
+
+		free(t);
+
+		if(s == NULL) {
+			return NULL;
+		}
+
+		if(s->cur_dirlist == NULL) {
+			return NULL;
+		}
+
+		cur = s->cur_dirlist;
+	}
+
+	char *fn;
+
+	while(cur != NULL) {
+		fn = cur->file_name;
+		cur = cur->next;
+		if (strncmp(fn, text, len) == 0) {
+			return strdup(fn);
 		}
 	}
 
@@ -67,6 +118,9 @@ void parse_command_line(char *line) {
 		return;
 	} else if(strcmp(item, "close") == 0) {
 		cmd_close(line, ' ');
+		return;
+	} else if((strcmp(item, "quit") == 0) || (strcmp(item, "exit") == 0)) {
+		cmd_quit(line, ' ');
 		return;
 	}
 
@@ -105,6 +159,12 @@ void parse_command_line(char *line) {
 	} else if(strcmp(item, "close") == 0) {
 		cmd_close(line, which);
 		return;
+	} else if(strcmp(item, "fxp") == 0) {
+		cmd_fxp(line, which);
+		return;
+	} else if(strcmp(item, "mkdir") == 0) {
+		cmd_mkdir(line, which);
+		return;
 	}
 
 	printf("Err: bad command.\n");
@@ -117,45 +177,58 @@ void parse_command_line(char *line) {
 	}*/
 }
 
+int get_current_arg_n() {
+	char *t = strdup(rl_line_buffer);
+	char *s;
+	int n = 0;
+
+	char *sp = strtok_r(t, " \r", &s);
+	
+	while(sp != NULL) {
+		sp = strtok_r(NULL, " \r", &s);
+		n++;
+	}
+
+	free(t);
+	return n;
+}
+
 char **tab_auto_complete(const char *text, int start, int end) {
-	//printf("S: %s\n",text);
+	int arg_n = get_current_arg_n();
+	//printf("argn: %d\n",arg_n);
 	rl_attempted_completion_over = 1;
-	return rl_completion_matches(text, command_name_generator);
+
+	//if first arg, look for commands
+	//if second arg, look for command compatible completions
+	if(arg_n <= 1) {
+		return rl_completion_matches(text, command_name_generator);
+	} else {
+		return rl_completion_matches(text, command_arg_generator);
+	}
 }
 
 void ui_loop() {
 	bool running = true;
 	char *str_in; //[UI_INPUT_MAX];
-	struct site_pair *current_pair = NULL;
-	char s_prefix[255];
-	char *s_noname = "--";
-	char *s_lname, *s_rname;
+	char *s_prefix;//[255];
 
 	rl_attempted_completion_function = tab_auto_complete;
 
 	pthread_t ui_thread;
 	pthread_create(&ui_thread, NULL, thread_ui, NULL);
 
+	pthread_t ui_ind_thread;
+	pthread_create(&ui_ind_thread, NULL, thread_indicator, NULL);
+
 	while(running) {
-		current_pair = site_get_current_pair();
+		s_prefix = generate_ui_prompt(' ', ' ');
 
-		if(current_pair->left == NULL) {
-			s_lname = s_noname;
-		} else {
-			s_lname = current_pair->left->name;
-		}
-
-		if(current_pair->right == NULL) {
-			s_rname = s_noname;
-		} else {
-			s_rname = current_pair->right->name;
-		}
-		snprintf(s_prefix, 254, "[ %s <> %s ] >> ", s_lname, s_rname);
 		//fgets(str_in, UI_INPUT_MAX , stdin);
 		str_in = readline(s_prefix);
 		add_history(str_in);
 		parse_command_line(str_in);
 		free(str_in);
+		free(s_prefix);
 	}
 }
 

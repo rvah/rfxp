@@ -1,6 +1,9 @@
 #pragma once
 #include "general.h"
 #include "libs/inih/ini.h"
+#include "skiplist.h"
+#include "priolist.h"
+#include "hilight.h"
 
 void config_cleanup();
 struct site_config *get_site_config_by_name(char *name);

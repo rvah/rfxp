@@ -3,7 +3,7 @@
 FILE *logfd;
 
 bool log_init() {
-	logfd = fopen("rfxp.log", "a");
+	logfd = fopen("mfxp.log", "a");
 	return logfd != NULL;
 }
 
@@ -22,8 +22,13 @@ void log_w(char *format, ...) {
 void log_ui(uint32_t from_id, uint32_t type, char *format, ...) {
 	va_list args;
 	va_start(args, format);
-	char *s_data = malloc(LOG_UI_MAX_LEN);
-	vsnprintf(s_data, LOG_UI_MAX_LEN, format, args);
+	int s_len = vsnprintf(NULL, 0, format, args)+2;
+	va_end(args);
+
+	char *s_data = malloc(s_len);
+
+	va_start(args, format);
+	vsnprintf(s_data, s_len, format, args);
 	va_end(args);
 
 	struct msg *m = malloc(sizeof(struct msg));

@@ -2,11 +2,17 @@
 
 struct site_pair *current_pair = NULL;
 
+void site_busy(struct site_info *site) {
+	site->busy = true;
+}
+
+void site_idle(struct site_info *site) {
+	site->busy = false;
+}
+
 void site_set_cwd(struct site_info *site, char *cwd) {
 	strlcpy(site->current_working_dir, cwd, MAX_PATH_LEN);
 }
-
-
 
 struct site_info *site_init(char *name, char *address, char *port, char *username, char *password, bool use_tls) {
 	struct site_info *site = malloc(sizeof(struct site_info));
@@ -19,6 +25,12 @@ struct site_info *site_init(char *name, char *address, char *port, char *usernam
 	site->use_tls = use_tls;
 	site->last_recv = NULL;
 	site->prot_sent = false;
+	site->busy = false;
+	site->current_speed = 0.0f;
+	site->ls_do_cache = false;
+	site->enable_sscn = false;
+	site->sscn_on = false;
+	site->enforce_sscn_server_mode = false;
 
 	site_set_cwd(site, "/");
 

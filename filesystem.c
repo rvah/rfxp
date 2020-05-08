@@ -1,5 +1,26 @@
 #include "filesystem.h"
 
+struct sort_node *priority_comparator(void *a, void *b) {
+	//first check if diff prio
+	if(((struct file_item *)a)->priority < ((struct file_item *)b)->priority) {
+		return a;
+	}
+
+	if(((struct file_item *)a)->priority > ((struct file_item *)b)->priority) {
+		return b;
+	}
+
+	//if not sort by A-Z
+	if(((struct file_item *)a)->file_name[0] <= ((struct file_item *)b)->file_name[0]) {
+		return a;
+	}
+	return b;
+}
+
+void dirlist_sort(struct file_item **list) {
+	merge_sort((struct sort_node **)list, priority_comparator);
+}
+
 struct file_item *find_local_file(char *path, char *filename) {
 	DIR *dir;
 	struct dirent *ent;
@@ -17,7 +38,9 @@ struct file_item *find_local_file(char *path, char *filename) {
 				if((ent->d_type == DT_DIR) || (ent->d_type == DT_REG)) {
 					item = malloc(sizeof(struct file_item));
 					strlcpy(item->file_name, ent->d_name, MAX_FILENAME_LEN);
+					str_trim(item->file_name);
 					item->file_type = (ent->d_type == DT_REG) ? FILE_TYPE_FILE : FILE_TYPE_DIR;
+					item->skip = skiplist_skip(item->file_name);
 					return item;
 				}
 			}
@@ -46,6 +69,11 @@ struct file_item *local_ls(char *path) {
 				item = malloc(sizeof(struct file_item));
 				strlcpy(item->file_name, ent->d_name, MAX_FILENAME_LEN);
 				item->file_type = (ent->d_type == DT_REG) ? FILE_TYPE_FILE : FILE_TYPE_DIR;
+				item->skip = skiplist_skip(item->file_name);
+				item->priority = priolist_get_priority(item->file_name);
+				item->hilight = hilight_file(item->file_name);
+
+				item->next = NULL;
 
 				if(list == NULL) {
 					list = item;
@@ -56,6 +84,8 @@ struct file_item *local_ls(char *path) {
 			}
 		}
 	}
+
+	dirlist_sort(&list);
 
 	return list;
 }
@@ -97,6 +127,26 @@ struct file_item *parse_list(char *text_list) {
 	struct file_item *prev_item = NULL;
 
 	while(line != NULL) {
+		bool foundEnd = false;
+
+		//if line starts with numbers, strip them
+		while((*line >= 0x30) && (*line <= 0x39)) {
+			line++;
+
+			//if next char is -, read line, if space, we are EOF
+			//(proftpd adds code on all lines, glftpd only on last)
+			if(*line == '-') {
+				line++;
+			} else if(*line == ' ') {
+				foundEnd = true;
+				break;
+			}
+		}
+
+		if(foundEnd) {
+			break;
+		}
+
 		struct file_item *item = parse_line(line);
 
 		if(item == NULL) {
@@ -114,6 +164,8 @@ struct file_item *parse_list(char *text_list) {
 
 		line = strtok_r(NULL, "\n", &save);
 	}
+
+	dirlist_sort(&first_item);
 
 	return first_item;
 }
@@ -187,6 +239,10 @@ struct file_item *parse_line(char *line) {
 			//full name is in saved ptr
 			item->file_name[0] = '\0';
 			strlcat(item->file_name, save, MAX_FILENAME_LEN);
+			str_trim(item->file_name);
+			item->skip = skiplist_skip(item->file_name);
+			item->priority = priolist_get_priority(item->file_name);
+			item->hilight = hilight_file(item->file_name);
 			break;
 		}
 
