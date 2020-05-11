@@ -14,6 +14,9 @@
 #include "parse.h"
 #include "net.h"
 #include "config.h"
+#include "transfer_result.h"
+#include "stats.h"
+#include "transfer_result.h"
 
 #define CONTROL_BUF_SZ 1024 // max number of bytes we can get at once 
 #define CONTROL_LINE_SZ 1024
@@ -26,21 +29,6 @@ struct pasv_details {
 	uint32_t port;
 	char unparsed[255];
 };
-
-struct transfer_result {
-	struct transfer_result *next;
-	bool success;
-	uint32_t n_transferred;
-	uint32_t n_failed;
-	char *filename;
-	uint64_t size;
-	double speed;
-	bool skipped;
-	uint32_t file_type;
-};
-
-struct transfer_result *transfer_result_create(bool succ, char *filename, uint64_t size, double speed, bool skipped, uint32_t file_type);
-void transfer_result_destroy(struct transfer_result *result);
 
 bool control_send(struct site_info *site, char *data);
 int32_t control_recv(struct site_info *site);

@@ -157,48 +157,6 @@ char *path_append_dir(const char *path, const char *dir) {
 	return t; 
 }
 
-double calc_transfer_speed(struct timeval *start, struct timeval *end, uint64_t size) {
-	uint64_t msec_start = start->tv_sec * 1000000 + start->tv_usec; 
-	uint64_t msec_end = end->tv_sec * 1000000 + end->tv_usec;
-	uint64_t diff_msec = msec_end - msec_start;
-
-	double diff_sec = (double)diff_msec / 1000000.0f;
-	double bps = (double)size / diff_sec;
-
-	return bps;
-}
-
-char *s_get_speed(double speed) {
-	char *out = malloc(20);
-	char *unit = malloc(5);
-
-	snprintf(unit, 5, "B/s");
-
-	if(speed > 1024.0) {
-		snprintf(unit, 5, "KB/s");
-		speed /= 1024.0;
-
-		if(speed > 1024.0) {
-			snprintf(unit, 5, "MB/s");
-			speed /= 1024.0;
-
-			if(speed > 1024.0) {
-				snprintf(unit, 5, "GB/s");
-				speed /= 1024.0;
-			}
-		}
-	}
-
-	snprintf(out, 20, "%.2f%s", speed, unit);
-	free(unit);
-
-	return out;
-}
-
-char *s_calc_transfer_speed(struct timeval *start, struct timeval *end, uint64_t size) {
-	return s_get_speed(calc_transfer_speed(start, end, size));
-}
-
 void str_tolower(char *s) {
 	for(int i = 0; s[i]; i++) {
 		s[i] = tolower(s[i]);

@@ -21,6 +21,8 @@ FILES = main.c \
 		net.c \
 		ident.c \
 		dictionary.c \
+		transfer_result.c \
+		stats.c \
 		libs/inih/ini.c
 
 LIBS = -lssl -lcrypto -lbsd -lreadline -lpthread

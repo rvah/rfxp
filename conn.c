@@ -1,31 +1,5 @@
 #include "conn.h"
 
-struct transfer_result *transfer_result_create(bool succ, char *filename, uint64_t size, double speed, bool skipped, uint32_t file_type) {
-	struct transfer_result *r = malloc(sizeof(struct transfer_result));
-
-	r->next = NULL;
-	r->success = succ;
-	r->filename = strdup(filename);
-	r->size = size;
-	r->speed = speed;
-	r->skipped = skipped;
-	r->file_type = file_type;
-
-	return r;	
-}
-
-void transfer_result_destroy(struct transfer_result *result) {
-	struct transfer_result *prev;
-
-	while(result != NULL) {
-		prev = result;
-		result = result->next;
-
-		free(prev->filename);
-		free(prev);
-	}
-}
-
 uint32_t read_code(char *buf) {
 	char a = buf[0] - 0x30;
 	char b = buf[1] - 0x30;
@@ -909,6 +883,19 @@ struct transfer_result *__ftp_get_recursive(struct site_info *site, char *dirnam
 	struct transfer_result *ret = transfer_result_create(true, strdup(dirname), 0, 0.0f, false, FILE_TYPE_DIR);
 	struct transfer_result *rp = ret;
 
+	//count files in list
+	uint32_t tot_files = 0;
+	uint32_t cur_file_num = 0;
+
+	while(fl != NULL) {
+		if(fl->file_type == FILE_TYPE_FILE) {
+			tot_files++;
+		}
+		fl = fl->next;
+	}
+
+	fl = site->cur_dirlist;
+
 	while(fl != NULL) {
 		//move to end of ret list
 		while(rp->next != NULL) {
@@ -916,7 +903,9 @@ struct transfer_result *__ftp_get_recursive(struct site_info *site, char *dirnam
 		}
 
 		if(fl->file_type == FILE_TYPE_FILE) {
-			log_ui(site->thread_id, LOG_T_I, "%s: downloading file..\n", fl->file_name);
+			cur_file_num++;
+
+			log_ui(site->thread_id, LOG_T_I, "%s: downloading file [%d/%d]\n", fl->file_name, cur_file_num, tot_files);
 
 			struct transfer_result *f_ret = ftp_get(site, fl->file_name, new_lpath, new_rpath);
 
@@ -943,13 +932,23 @@ struct transfer_result *__ftp_get_recursive(struct site_info *site, char *dirnam
 }
 
 struct transfer_result *ftp_get_recursive(struct site_info *site, char *dirname, char *local_dir, char *remote_dir) {
+	struct timeval time_start;
+	struct timeval time_end;
+
+	gettimeofday(&time_start, NULL);
+
 	char *remote_origin = strdup(remote_dir);
 	struct transfer_result *ret = __ftp_get_recursive(site, dirname, local_dir, remote_dir);
+
+	gettimeofday(&time_end, NULL);
 
 	ftp_cwd(site, remote_origin);
 	ftp_ls(site);
 
+	log_ui(site->thread_id, LOG_T_I, "Stats: %s\n", s_gen_stats(ret, time_end.tv_sec - time_start.tv_sec));
+
 	free(remote_origin);
+
 	return ret; 
 }
 
@@ -1006,6 +1005,19 @@ struct transfer_result *__ftp_put_recursive(struct site_info *site, char *dirnam
 	struct transfer_result *ret = transfer_result_create(true, strdup(dirname), 0, 0.0f, false, FILE_TYPE_DIR);
 	struct transfer_result *rp = ret;
 
+	//count files in list
+	uint32_t tot_files = 0;
+	uint32_t cur_file_num = 0;
+
+	while(lp != NULL) {
+		if(lp->file_type == FILE_TYPE_FILE) {
+			tot_files++;
+		}
+		lp = lp->next;
+	}
+
+	lp = l_list;
+
 	while(lp != NULL) {
 		//move to end of ret list
 		while(rp->next != NULL) {
@@ -1013,7 +1025,8 @@ struct transfer_result *__ftp_put_recursive(struct site_info *site, char *dirnam
 		}
 
 		if(lp->file_type == FILE_TYPE_FILE) {
-			log_ui(site->thread_id, LOG_T_I, "%s: uploading file..\n", lp->file_name);
+			cur_file_num++;
+			log_ui(site->thread_id, LOG_T_I, "%s: uploading file [%d/%d]\n", lp->file_name, cur_file_num, tot_files);
 
 			struct transfer_result *f_ret = ftp_put(site, lp->file_name, new_lpath, new_rpath);
 
@@ -1046,12 +1059,21 @@ struct transfer_result *__ftp_put_recursive(struct site_info *site, char *dirnam
 }
 
 struct transfer_result *ftp_put_recursive(struct site_info *site, char *dirname, char *local_dir, char *remote_dir) {
+	struct timeval time_start;
+	struct timeval time_end;
+
+	gettimeofday(&time_start, NULL);
+
 	char *remote_origin = strdup(remote_dir);
 	struct transfer_result *ret = __ftp_put_recursive(site, dirname, local_dir, remote_dir);
+
+	gettimeofday(&time_end, NULL);
 
 	ftp_cwd(site, remote_origin);
 	ftp_ls(site);
 	
+	log_ui(site->thread_id, LOG_T_I, "Stats: %s\n", s_gen_stats(ret, time_end.tv_sec - time_start.tv_sec));
+
 	free(remote_origin);
 
 	return ret;
@@ -1239,6 +1261,19 @@ struct transfer_result *__fxp_recursive(struct site_info *src, struct site_info 
 	struct transfer_result *ret = transfer_result_create(true, strdup(dirname), 0, 0.0f, false, FILE_TYPE_DIR);
 	 struct transfer_result *rp = ret;	
 
+	//count files in list
+	uint32_t tot_files = 0;
+	uint32_t cur_file_num = 0;
+
+	while(fl != NULL) {
+		if(fl->file_type == FILE_TYPE_FILE) {
+			tot_files++;
+		}
+		fl = fl->next;
+	}
+
+	fl = src->cur_dirlist;
+
 	while(fl != NULL) {
 		//move to end of ret list
 		while(rp->next != NULL) {
@@ -1246,7 +1281,8 @@ struct transfer_result *__fxp_recursive(struct site_info *src, struct site_info 
 		}
 
 		if(fl->file_type == FILE_TYPE_FILE) {
-			log_ui(src->thread_id, LOG_T_I, "%s: fxp'ing file..\n", fl->file_name);
+			cur_file_num++;
+			log_ui(src->thread_id, LOG_T_I, "%s: fxp'ing file [%d/%d]\n", fl->file_name, cur_file_num, tot_files);
 
 			struct transfer_result *f_ret = fxp(src, dst, fl->file_name, new_spath, new_dpath);
 
@@ -1270,14 +1306,23 @@ struct transfer_result *__fxp_recursive(struct site_info *src, struct site_info 
 }
 
 struct transfer_result *fxp_recursive(struct site_info *src, struct site_info *dst, char *dirname, char *src_dir, char *dst_dir) {
+	struct timeval time_start;
+	struct timeval time_end;
+
+	gettimeofday(&time_start, NULL);
+
 	char *src_origin = strdup(src_dir);
 	char *dst_origin = strdup(dst_dir);
 	struct transfer_result *ret = __fxp_recursive(src, dst, dirname, src_dir, dst_dir);
+
+	gettimeofday(&time_end, NULL);
 
 	ftp_cwd(src, src_origin);
 	ftp_cwd(dst, dst_origin);
 	ftp_ls(src);
 	ftp_ls(dst);
+
+	log_ui(src->thread_id, LOG_T_I, "Stats: %s\n", s_gen_stats(ret, time_end.tv_sec - time_start.tv_sec));
 
 	free(src_origin);
 	free(dst_origin);

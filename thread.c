@@ -185,12 +185,12 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 			log_ui(s->thread_id, LOG_T_W, "%s: no support for uploading symlinks yet\n", p_filename);
 			break;
 		} else if(filetype == FILE_TYPE_FILE) {
-			if(!ftp_put(s, p_filename, p_dir, s->current_working_dir)) {
+			if(!transfer_succ(ftp_put(s, p_filename, p_dir, s->current_working_dir))) {
 				log_ui(s->thread_id, LOG_T_E, "%s: upload failed!\n", p_filename);
 				break;
 			}
 		} else if(filetype == FILE_TYPE_DIR) {
-			if(!ftp_put_recursive(s, p_filename, p_dir, s->current_working_dir)) {
+			if(!transfer_succ(ftp_put_recursive(s, p_filename, p_dir, s->current_working_dir))) {
 				log_ui(s->thread_id, LOG_T_E, "%s: recursive upload failed!\n", p_filename);
 				break;
 			}
@@ -221,12 +221,12 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 			log_ui(s->thread_id, LOG_T_W, "%s: no support for downloading symlinks yet\n", (char *)m->data);
 			break;
 		} else if(file->file_type == FILE_TYPE_FILE) {
-			if(!ftp_get(s, (char *)m->data, "./", s->current_working_dir)) {
+			if(!transfer_succ(ftp_get(s, (char *)m->data, "./", s->current_working_dir))) {
 				log_ui(s->thread_id, LOG_T_E, "%s: download failed!\n", (char *)m->data);
 				break;
 			}
 		} else if(file->file_type == FILE_TYPE_DIR) {
-			if(!ftp_get_recursive(s, (char *)m->data, "./", s->current_working_dir)) {
+			if(!transfer_succ(ftp_get_recursive(s, (char *)m->data, "./", s->current_working_dir))) {
 				log_ui(s->thread_id, LOG_T_E, "%s: recursive download failed!\n", (char *)m->data);
 				break;
 			}
@@ -259,12 +259,12 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 			log_ui(s->thread_id, LOG_T_W, "%s: no support for fxping symlinks yet\n", farg->filename);
 			break;
 		} else if(fxp_file->file_type == FILE_TYPE_FILE) {
-			if(!fxp(s, farg->dst, farg->filename, s->current_working_dir, farg->dst->current_working_dir)) {
+			if(!transfer_succ(fxp(s, farg->dst, farg->filename, s->current_working_dir, farg->dst->current_working_dir))) {
 				log_ui(s->thread_id, LOG_T_E, "%s: fxp failed!\n", farg->filename);
 				break;
 			}
 		} else if(fxp_file->file_type == FILE_TYPE_DIR) {
-			if(!fxp_recursive(s, farg->dst, farg->filename, s->current_working_dir, farg->dst->current_working_dir)) {
+			if(!transfer_succ(fxp_recursive(s, farg->dst, farg->filename, s->current_working_dir, farg->dst->current_working_dir))) {
 				log_ui(s->thread_id, LOG_T_E, "%s: recursive fxp failed!\n", farg->filename);
 				break;
 			}

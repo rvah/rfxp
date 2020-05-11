@@ -1,6 +1,8 @@
 #pragma once
 #include "general.h"
 #include <ctype.h>
+#include "transfer_result.h"
+#include "filesystem.h"
 
 bool match_rule(const char *rule, const char *str);
 void str_ltrim(char *s);
@@ -13,7 +15,4 @@ char *str_get_path(char *s);
 char *str_get_file(char *s);
 char *path_append_file(const char *path, const char *file);
 char *path_append_dir(const char *path, const char *dir);
-double calc_transfer_speed(struct timeval *start, struct timeval *end, uint64_t size);
-char *s_get_speed(double speed);
-char *s_calc_transfer_speed(struct timeval *start, struct timeval *end, uint64_t size);
 void str_tolower(char *s);
