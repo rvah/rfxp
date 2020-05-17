@@ -24,6 +24,7 @@ FILES = main.c \
 		transfer_result.c \
 		stats.c \
 		colors.c \
+		date.c \
 		libs/inih/ini.c
 
 LIBS = -lssl -lcrypto -lbsd -lreadline -lpthread

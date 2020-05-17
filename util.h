@@ -4,6 +4,7 @@
 #include "transfer_result.h"
 #include "filesystem.h"
 
+char *expand_home_path(const char *in);
 bool match_rule(const char *rule, const char *str);
 void str_ltrim(char *s);
 void str_rtrim(char *s);

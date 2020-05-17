@@ -1,5 +1,20 @@
 #include "util.h"
 
+char *expand_home_path(const char *in) {
+	char *d = strdup(in);
+	str_trim(d);
+
+	if(d[0] == '~') {
+		wordexp_t exp_result;
+		wordexp(d, &exp_result, 0);
+
+		free(d);
+		d = strdup(exp_result.we_wordv[0]);
+	}
+
+	return d;
+}
+
 bool __match_rule(const char *rule, const char *str, int ri, int si) {
 	if(rule[ri]  == '\0') {
 		return str[si] == '\0';

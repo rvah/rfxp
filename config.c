@@ -6,10 +6,25 @@ struct config *config_get_conf() {
 	return app_conf;
 }
 
-void config_init() {
+bool config_init() {
 	app_conf = malloc(sizeof(struct config));
 	app_conf->sites = NULL;
 	app_conf->enable_xdupe = false;
+
+	char *path = expand_home_path(MFXP_CONF_DIR);
+
+	//check if config dir exist
+	if(!file_exists(path)) {
+		if(mkdir(path, 0755) != 0) {
+			printf("failed creating dir: %s\n", path);
+			free(path);
+			return false;
+		}
+	}
+
+	free(path);
+
+	return true;
 }
 
 void print_site_configs() {
@@ -92,36 +107,7 @@ static int ini_read_handler(void* user, const char* section, const char* name, c
 	char *save;
 	char *s_name = strtok_r(strdup(section), "_", &save);
 
-	if(strcmp(s_name, "site") == 0) {
-		char *s_id = strtok_r(NULL, "_", &save);
-		uint32_t id = atoi(s_id);
-
-		struct site_config *s = get_site_config(id);
-		
-		if(s == NULL) {
-			s = malloc(sizeof(struct site_config));
-			s->id = id;
-			s->next = NULL;
-			add_site_config(s);
-		}
-		
-				
-		if(strcmp(name, "name") == 0) {
-			strlcpy(s->name, value, 254);
-		} else if(strcmp(name, "hostname") == 0) {
-			strlcpy(s->host, value, 254);
-		} else if(strcmp(name, "port") == 0) {
-			strlcpy(s->port, value, 254);
-		} else if(strcmp(name, "username") == 0) {
-			strlcpy(s->user, value, 254);
-		} else if(strcmp(name, "password") == 0) {
-			strlcpy(s->pass, value, 254);
-		} else {
-			printf("%s: bad config key\n", name);
-			return 0;
-		}
-		
-	} else if(strcmp(s_name, "general") == 0) {
+	if(strcmp(s_name, "general") == 0) {
 		if(strcmp(name, "skiplist") == 0) {
 			if(!skiplist_init(value)) {
 				printf("failed to init skiplist.\n");
@@ -167,6 +153,27 @@ static int ini_read_handler(void* user, const char* section, const char* name, c
 			str_trim(s_show);
 			app_conf->show_dirlist_on_cwd = strcmp(value, "true") == 0;
 			free(s_show);
+			return 0;
+		} else if(strcmp(name, "default_sort") == 0) {
+			char *s_sort = strdup(value);
+			str_trim(s_sort);
+
+			if(strcmp(s_sort, "time_asc") == 0) {
+				filesystem_set_sort(SORT_TYPE_TIME_ASC);
+			} else if(strcmp(s_sort, "time_desc") == 0) {
+				filesystem_set_sort(SORT_TYPE_TIME_DESC);
+			} else if(strcmp(s_sort, "name_asc") == 0) {
+				filesystem_set_sort(SORT_TYPE_NAME_ASC);
+			} else if(strcmp(s_sort, "name_desc") == 0) {
+				filesystem_set_sort(SORT_TYPE_NAME_DESC);
+			} else if(strcmp(s_sort, "size_asc") == 0) {
+				filesystem_set_sort(SORT_TYPE_SIZE_ASC);
+			} else if(strcmp(s_sort, "size_desc") == 0) {
+				filesystem_set_sort(SORT_TYPE_SIZE_DESC);
+			}
+
+			free(s_sort);
+			return 0;
 		}
 	} else if(strcmp(s_name, "ident") == 0) {
 		ident_set_setting(name, value);
@@ -178,7 +185,11 @@ static int ini_read_handler(void* user, const char* section, const char* name, c
 }
 
 bool config_read(char *path) {
-	config_init();
+	if(!config_init()) {
+		return false;
+	}
+
+	app_conf->sites = read_site_config_file("noob");
 
 	if (ini_parse(path, ini_read_handler, NULL) < 0) {
 		return false;
@@ -187,4 +198,154 @@ bool config_read(char *path) {
 	//print_site_configs();
 
 	return true;
+}
+
+bool write_site_config_file(struct site_config *sites, const char *key) {
+	//count num sites
+	uint32_t n_sites = 0;
+	struct site_config *s = sites;
+
+	while(s != NULL) {
+		n_sites++;
+
+		s = s->next;
+	}
+
+
+	if(n_sites == 0) {
+		return false;
+	}
+
+	struct sites_file_head head;
+
+	size_t head_len = sizeof(struct sites_file_head);
+	size_t site_len = sizeof(struct site_config);
+
+	strlcpy(head.magic, "MFXP", 5);
+	head.n_sites = n_sites;
+	head.reserved1 = 0;
+	head.reserved2 = 0;
+	head.reserved3 = 0;
+	head.reserved4 = 0;
+
+	char *dbpath = expand_home_path(SITE_CONFIG_FILE_PATH);
+
+	FILE *fp = fopen(dbpath, "wb");
+
+	free(dbpath);
+
+	if(fp == NULL) {
+		return false;
+	}
+
+	//calc size of data we need
+	int out_len = head_len + n_sites * site_len;
+	uint8_t *out_buf = malloc(out_len);
+	size_t ofs = head_len;
+
+	memcpy(out_buf, &head, head_len);
+
+	s = sites;
+
+	while(s != NULL) {
+		memcpy(out_buf+ofs, s, site_len);
+		s = s->next;
+		ofs += site_len;
+	}
+
+	//encrypt our buffer
+	uint8_t *enc_buf = aes_encrypt(out_buf, &out_len);
+
+	if(fwrite(enc_buf, 1, out_len, fp) != out_len) {
+		fclose(fp);
+		free(enc_buf);
+		free(out_buf);
+		return false;
+	}
+	
+	free(enc_buf);
+	free(out_buf);
+	fclose(fp);
+	return true;
+}
+
+struct site_config *read_site_config_file(const char *key) {
+	char *dbpath = expand_home_path(SITE_CONFIG_FILE_PATH);
+
+	//if file dont exist, simply return
+	if(!file_exists(dbpath)) {
+		free(dbpath);
+		return NULL;
+	}
+
+	FILE *fp = fopen(dbpath, "rb");
+
+	free(dbpath);
+
+	if(fp == NULL) {
+		return NULL;
+	}
+
+	struct sites_file_head head;
+	size_t head_len = sizeof(struct sites_file_head);
+	size_t site_len = sizeof(struct site_config);
+
+	size_t out_len;
+
+
+	fseek(fp, 0L, SEEK_END);
+	int file_sz = ftell(fp);
+	rewind(fp);
+
+	uint8_t *enc_buf = malloc(file_sz);
+
+
+	if((out_len = fread(enc_buf, 1, file_sz, fp)) != file_sz) {
+		//printf("failed reading sitedb file.\n");
+		free(enc_buf);
+		printf("failed to read sitesdb..\n");
+		fclose(fp);
+		return NULL;
+	}
+
+	fclose(fp);
+
+	uint8_t *dec_buf = aes_decrypt(enc_buf, &file_sz);
+
+	free(enc_buf);
+
+	memcpy(&head, dec_buf, head_len);
+
+	if(strcmp(head.magic, "MFXP") != 0) {
+		printf("bad encryption key, or sitedb is not a valid sitedb file!\n");
+		free(dec_buf);
+		exit(1);
+	}
+
+	if(head.n_sites == 0) {
+		free(dec_buf);
+		return NULL;
+	}
+
+	int ofs = head_len;
+	struct site_config *sites = NULL;
+
+	for(int i = 0; i < head.n_sites; i++) {
+		struct site_config *new_site = malloc(site_len);
+		
+		memcpy(new_site, dec_buf+ofs, site_len);
+
+		ofs += site_len;
+		new_site->next = NULL;
+
+		if(sites == NULL) {
+			sites = new_site;
+		} else {
+			new_site->next = sites;
+			sites = new_site;
+		}
+	}
+
+	free(dec_buf);
+	return sites;
 }

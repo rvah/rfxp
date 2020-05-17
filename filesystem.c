@@ -1,5 +1,90 @@
 #include "filesystem.h"
 
+static uint32_t __current_sort = SORT_TYPE_TIME_DESC;
+
+uint32_t filesystem_get_sort() {
+	return __current_sort;
+}
+
+void filesystem_set_sort(uint32_t sort) {
+	__current_sort = sort;
+}
+
+struct sort_node *az_comparator(void *a, void *b, bool asc) {
+	if(asc) {
+		if(((struct file_item *)a)->file_name[0] <= ((struct file_item *)b)->file_name[0]) {
+			return a;
+		}
+	} else {
+		if(((struct file_item *)a)->file_name[0] >= ((struct file_item *)b)->file_name[0]) {
+			return a;
+		}
+	}
+
+	return b;
+}
+
+struct sort_node *time_comparator(void *a, void *b, bool asc) {
+	//tmp fix for local dirlist which doesnt have dates
+	if(((struct file_item *)a)->date[0] == '\0') {
+		return az_comparator(a, b, asc);
+	}
+
+	struct date_info *d_a = parse_date(((struct file_item *)a)->date);
+	struct date_info *d_b = parse_date(((struct file_item *)b)->date);
+
+	time_t t_a = date_to_unixtime(d_a);
+	time_t t_b = date_to_unixtime(d_b);
+
+	free(d_a);
+	free(d_b);
+
+	if(asc) {
+		if(t_a <= t_b) {
+			return a;
+		}
+	} else {
+		if(t_a >= t_b) {
+			return a;
+		}
+	}
+
+	return b;
+}
+
+struct sort_node *size_comparator(void *a, void *b, bool asc) {
+	if(asc) {
+		if(((struct file_item *)a)->size <= ((struct file_item *)b)->size) {
+			return a;
+		}
+	} else {
+		if(((struct file_item *)a)->size >= ((struct file_item *)b)->size) {
+			return a;
+		}
+	}
+
+	return b;
+}
+
+struct sort_node *general_comparator(void *a, void*b) {
+	switch(filesystem_get_sort()) {
+	case SORT_TYPE_TIME_ASC:
+		return time_comparator(a, b, true);
+	case SORT_TYPE_TIME_DESC:
+		return time_comparator(a, b, false);
+	case SORT_TYPE_NAME_ASC:
+		return az_comparator(a, b, true);
+	case SORT_TYPE_NAME_DESC:
+		return az_comparator(a, b, false);
+	case SORT_TYPE_SIZE_ASC:
+		return size_comparator(a, b, true);
+	case SORT_TYPE_SIZE_DESC:
+		return size_comparator(a, b, false);
+	}
+
+	return a;
+}
+
 struct sort_node *priority_comparator(void *a, void *b) {
 	//first check if diff prio
 	if(((struct file_item *)a)->priority < ((struct file_item *)b)->priority) {
@@ -10,26 +95,15 @@ struct sort_node *priority_comparator(void *a, void *b) {
 		return b;
 	}
 
-	//if not sort by A-Z
-	if(((struct file_item *)a)->file_name[0] <= ((struct file_item *)b)->file_name[0]) {
-		return a;
-	}
-	return b;
-}
-
-struct sort_node *az_comparator(void *a, void *b) {
-	//if not sort by A-Z
-	if(((struct file_item *)a)->file_name[0] <= ((struct file_item *)b)->file_name[0]) {
-		return a;
-	}
-	return b;
+	//if not sort by normal comp
+	return general_comparator(a, b);
 }
 
 void dirlist_sort(struct file_item **list, bool prio_sort) {
 	if(prio_sort) {
 		merge_sort((struct sort_node **)list, priority_comparator);
 	} else {
-		merge_sort((struct sort_node **)list, az_comparator);
+		merge_sort((struct sort_node **)list, general_comparator);
 	}
 }
 

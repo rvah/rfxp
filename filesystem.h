@@ -6,6 +6,8 @@
 #include "priolist.h"
 #include "sort.h"
 #include "hilight.h"
+#include "parse.h"
+#include "date.h"
 
 #define MAX_PATH_LEN 4096
 #define MAX_FILENAME_LEN 1024
@@ -18,6 +20,14 @@
 #define FILE_USER_LEN 255
 #define FILE_GROUP_LEN 255
 #define FILE_DATE_LEN 13
+
+#define SORT_TYPE_TIME_ASC 0
+#define SORT_TYPE_TIME_DESC 1
+#define SORT_TYPE_NAME_ASC 2
+#define SORT_TYPE_NAME_DESC 3
+#define SORT_TYPE_SIZE_ASC 4
+#define SORT_TYPE_SIZE_DESC 5
+
 
 struct file_item {
 	struct file_item *next;
@@ -33,6 +43,8 @@ struct file_item {
 	bool hilight;
 };
 
+uint32_t filesystem_get_sort();
+void filesystem_set_sort(uint32_t sort);
 void file_item_destroy(struct file_item * item);
 struct file_item *file_item_cpy(struct file_item * item);
 struct file_item *find_local_file(const char *path, const char *filename);

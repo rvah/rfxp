@@ -15,7 +15,7 @@
 #include <wordexp.h>
 #include <sys/time.h>
 
-#define MFXP_VERSION "0.3"
+#define MFXP_VERSION "0.4"
 
 #define NFO_DL_MAX_SZ 102400
 

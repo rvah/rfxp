@@ -4,32 +4,41 @@
 void cmd_help(char *line) {
 	printf("\nGeneral commands:\n\n");
 
-	printf("cd <dir>\t\t\topen local directory\n");
-	printf("close\t\t\t\tclose both sites in pair\n");
-	printf("exit/quit\t\t\tclose application\n");
-	printf("help\t\t\t\tshow this help(!)\n");
-	printf("log <num lines>\t\t\tshow last n lines from log\n");
-	printf("ls\t\t\t\tlist current local working directory\n");
-	printf("mkdir\t\t\t\tcreate local directory\n");
-	printf("open <site1,site2>\t\topen site pair\n");
-	printf("rm <dir/file>\t\t\tdelete local file or directory\n\n");
+	printf("cd <dir>\t\t\t\topen local directory\n");
+//	printf("close\t\t\t\tclose both sites in pair\n");
+	printf("exit/quit\t\t\t\tclose application\n");
+	printf("help\t\t\t\t\tshow this help(!)\n");
+	printf("log <num lines>\t\t\t\tshow last n lines from log\n");
+	printf("ls\t\t\t\t\tlist current local working directory\n");
+//	printf("mkdir\t\t\t\tcreate local directory\n");
+//	printf("open <site1,site2>\t\topen site pair\n");
+	printf("rm <dir/file>\t\t\t\tdelete local file or directory\n");
+	printf("ssort\t\t\t\t\tsort according to size, run once for ASC, twice for DESC\n");
+	printf("tsort\t\t\t\t\tsort according to time, run once for ASC, twice for DESC\n");
+	printf("nsort\t\t\t\t\tsort according to file/dirname, run once for ASC, twice for DESC\n\n");
+
+	printf("Site manager commands:\n\n");
+	printf("sm add <name> <host:port> <user> <pass>\tadd site\n");
+	printf("sm rm <site>\t\t\t\tremove site\n");
+	printf("sm ls\t\t\t\t\tlist all sites\n");
+	printf("sm ls <site>\t\t\t\tshow site details\n\n");
 
 	printf("Site specific commands:\n");
 	printf("- prefix command with either 'l' or 'r' to run on left or right site.\n");
 	printf("- example: lcd Test_Rls-BLAH/\n\n");
 
-	printf("cd <dir>\t\t\topen directory on site\n");
-	printf("close\t\t\t\tclose site connection\n");
-	printf("fxp <dir/file>\t\t\tfxp file or directory to the other site in the pair\n");
-	printf("get <dir/file>\t\t\tdownload file or directory\n");
-	printf("ls\t\t\t\tlist current working directory on site\n");
-	printf("mkdir <dir>\t\t\tcreate dir on site\n");
-	printf("nfo <file>\t\t\tview remote nfo/sfv/txt/diz\n");
-	printf("open <site name>\t\topen connection to site\n");
-	printf("put <dir/file>\t\t\tupload file or directory\n");
-	printf("quote <raw cmd>\t\t\tsend raw command string to site\n");
-	printf("rm <file/dir>\t\t\tdelete file or directory on site\n");
-	printf("site <cmd>\t\t\tsend SITE command\n\n");
+	printf("cd <dir>\t\t\t\topen directory on site\n");
+	printf("close\t\t\t\t\tclose site connection\n");
+	printf("fxp <dir/file>\t\t\t\tfxp file or directory to the other site in the pair\n");
+	printf("get <dir/file>\t\t\t\tdownload file or directory\n");
+	printf("ls\t\t\t\t\tlist current working directory on site\n");
+	printf("mkdir <dir>\t\t\t\tcreate dir on site\n");
+	printf("nfo <file>\t\t\t\tview remote nfo/sfv/txt/diz\n");
+	printf("open <site name>\t\t\topen connection to site\n");
+	printf("put <dir/file>\t\t\t\tupload file or directory\n");
+	printf("quote <raw cmd>\t\t\t\tsend raw command string to site\n");
+	printf("rm <file/dir>\t\t\t\tdelete file or directory on site\n");
+	printf("site <cmd>\t\t\t\tsend SITE command\n\n");
 }
 
 char *get_arg(char *line, int i) {
@@ -450,4 +459,182 @@ void cmd_local_rm(char *line) {
 void cmd_local_mkdir(char *line) {
 	printf("not implemented.\n");
 	return;
+}
+
+void cmd_set_sort(char *line, char type) {
+	uint32_t cur_sort = filesystem_get_sort();
+	uint32_t new_sort;
+
+	const char *s_sort[] = {
+		"time, ascending",
+		"time, descending",
+		"file/dirname, ascending",
+		"file/dirname, descending",
+		"size, ascending",
+		"size, descending"
+	};
+
+
+	switch(type) {
+	case 'n':
+		new_sort = (cur_sort == SORT_TYPE_NAME_ASC) ? SORT_TYPE_NAME_DESC : SORT_TYPE_NAME_ASC;
+		break;
+	case 's':
+		new_sort = (cur_sort == SORT_TYPE_SIZE_ASC) ? SORT_TYPE_SIZE_DESC : SORT_TYPE_SIZE_ASC;
+		break;
+	case 't':
+		new_sort = (cur_sort == SORT_TYPE_TIME_ASC) ? SORT_TYPE_TIME_DESC : SORT_TYPE_TIME_ASC;
+		break;
+	}
+
+	printf("sort set to: %s\n", s_sort[new_sort]);
+
+	filesystem_set_sort(new_sort);
+}
+
+void cmd_sm(char *line) {
+	char *cmd = get_arg(line, 1);
+	char *which_site;
+
+	if((cmd == NULL)) {
+		printf("bad args, please see help\n");
+		return;
+	}
+
+	if(strcmp(cmd, "add") == 0) {
+		//sm add <name> <host:port> <user> <pass>
+		char *name = get_arg(line, 2);
+		char *hport = get_arg(line, 3);
+		char *user = get_arg(line, 4);
+		char *pass = get_arg(line, 5);
+
+		char *host;
+		char *port;
+		char *save;
+
+		if((name == NULL) || (hport == NULL) || (user == NULL) || (pass == NULL)) {
+			printf("bad args, please see help\n");
+			return;
+		}
+
+		if(strstr(hport, ":") == NULL) {
+			printf("bad host:port format, please fix and try again.\n");
+			return;
+		}
+
+		if(get_site_config_by_name(name) != NULL) {
+			printf("site with name '%s' already exists.\n", name);
+			return;
+		}
+
+		host = strtok_r(hport, ":", &save);
+		port = strtok_r(NULL, ":", &save);
+
+		struct site_config *new_site = malloc(sizeof(struct site_config));
+
+		new_site->id = 0;
+
+		//assign new id
+		struct site_config *all = config_get_conf()->sites;
+
+		while(all != NULL) {
+			if(all->id >= new_site->id) {
+				new_site->id = all->id+1;
+			}
+			all = all->next;
+		}
+
+		strlcpy(new_site->name, name, 255);
+		strlcpy(new_site->pass, pass, 255);
+		strlcpy(new_site->user, user, 255);
+		strlcpy(new_site->host, host, 255);
+		strlcpy(new_site->port, port, 6);
+		
+		new_site->tls = true;
+		new_site->next = NULL;
+
+		add_site_config(new_site);
+
+		printf("added site '%s'\n", new_site->name);
+
+		//commit changes to disk
+		if(!write_site_config_file(config_get_conf()->sites, "noob")) {
+			printf("Error writing sitedb to disk!\n");
+		}
+	} else if(strcmp(cmd, "rm") == 0) {
+		which_site = get_arg(line, 2);
+
+		if((which_site == NULL) || (get_site_config_by_name(which_site) == NULL)) {
+			printf("could not find any site called '%s'\n", which_site);
+			return;
+		}
+
+		struct site_config *all = config_get_conf()->sites;
+		struct site_config *prev = NULL;
+
+		while(all != NULL) {
+			if(strcasecmp(all->name, which_site) == 0) {
+				if(prev == NULL) {
+					config_get_conf()->sites = all->next;
+				} else {
+					prev->next = all->next;
+				}
+
+				printf("deleted site '%s'\n", all->name);
+
+				free(all);
+				break;
+			}
+
+			prev = all;
+			all = all->next;
+		}
+
+		//commit changes to disk
+		if(!write_site_config_file(config_get_conf()->sites, "noob")) {
+			printf("Error writing sitedb to disk!\n");
+		}
+	} else if(strcmp(cmd, "ls") == 0) {
+		struct site_config *s = config_get_conf()->sites;
+		which_site = get_arg(line, 2);
+
+		if(which_site == NULL) {
+			if(s == NULL) {
+				printf("no sites added.\n");
+				return;
+			}
+
+			printf("Added sites:\n");
+
+			while(s != NULL) {
+				printf("%s", s->name);
+
+				s = s->next;
+
+				if(s != NULL) {
+					printf(", ");
+				}
+			}
+
+			printf("\n");
+		} else {
+			struct site_config *site = get_site_config_by_name(which_site);
+
+			if(site == NULL) {
+				printf("could not find any site called '%s'\n", which_site);
+			} else {
+				printf("ID: %d\n", site->id);
+				printf("name: %s\n", site->name);
+				printf("host: %s\n", site->host);
+				printf("port: %s\n", site->port);
+				printf("user: %s\n", site->user);
+				printf("pass: <hidden>\n");
+			}
+		}
+	} else {
+		printf("bad sm command, please see help\n");
+		return;
+	}
+
+	
 }

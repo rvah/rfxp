@@ -38,6 +38,8 @@ char *commands[] = {
 	"lmkdir","rmkdir",
 	"lnfo", "rnfo",
 	"quit","exit",
+	"ssort", "tsort", "nsort",
+	"sm",
 	NULL
 };
 
@@ -150,6 +152,18 @@ void parse_command_line(char *line) {
 		return;
 	} else if((strcmp(item, "mkdir") == 0)) {
 		cmd_local_mkdir(line);
+		return;
+	} else if((strcmp(item, "nsort") == 0)) {
+		cmd_set_sort(line, 'n');
+		return;
+	} else if((strcmp(item, "tsort") == 0)) {
+		cmd_set_sort(line, 't');
+		return;
+	} else if((strcmp(item, "ssort") == 0)) {
+		cmd_set_sort(line, 's');
+		return;
+	} else if((strcmp(item, "sm") == 0)) {
+		cmd_sm(line);
 		return;
 	}
 

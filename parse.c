@@ -1,5 +1,104 @@
 #include "parse.h"
 
+struct dict_node **__dict_months = NULL;
+
+struct date_info *parse_date(const char *in) {
+	//supported formats
+	//Aug 5 2018
+	//May 13 15:47
+
+	if(__dict_months == NULL) {
+		__dict_months = dict_create();
+		static uint32_t month_jan = INT_MONTH_JAN;
+		static uint32_t month_feb = INT_MONTH_FEB;
+		static uint32_t month_mar = INT_MONTH_MAR;
+		static uint32_t month_apr = INT_MONTH_APR;
+		static uint32_t month_may = INT_MONTH_MAY;
+		static uint32_t month_jun = INT_MONTH_JUN;
+		static uint32_t month_jul = INT_MONTH_JUL;
+		static uint32_t month_aug = INT_MONTH_AUG;
+		static uint32_t month_sep = INT_MONTH_SEP;
+		static uint32_t month_oct = INT_MONTH_OCT;
+		static uint32_t month_nov = INT_MONTH_NOV;
+		static uint32_t month_dec = INT_MONTH_DEC;
+
+		dict_set(__dict_months, "Jan", &month_jan);
+		dict_set(__dict_months, "Feb", &month_feb);
+		dict_set(__dict_months, "Mar", &month_mar);
+		dict_set(__dict_months, "Apr", &month_apr);
+		dict_set(__dict_months, "May", &month_may);
+		dict_set(__dict_months, "Jun", &month_jun);
+		dict_set(__dict_months, "Jul", &month_jul);
+		dict_set(__dict_months, "Aug", &month_aug);
+		dict_set(__dict_months, "Sep", &month_sep);
+		dict_set(__dict_months, "Oct", &month_oct);
+		dict_set(__dict_months, "Nov", &month_nov);
+		dict_set(__dict_months, "Dec", &month_dec);
+	}
+
+	char *_in = strdup(in);
+	char *save, *save2;
+
+	str_trim(_in);
+
+	char *s_month = strtok_r(_in, " \t", &save);
+	char *s_day = strtok_r(NULL, " \t", &save);
+	char *s_year_time = strtok_r(NULL, " \t", &save);
+
+	struct date_info *ret = malloc(sizeof(struct date_info));
+	ret->year = 1970;
+	ret->month = INT_MONTH_JAN;
+	ret->day = 1;
+	ret->hour = 0;
+	ret->minute = 0;
+
+	if((s_month == NULL) || (s_day == NULL) || (s_year_time == NULL)) {
+		free(_in);
+		
+		return ret;
+	}
+
+	bool has_year = strstr(s_year_time, ":") == NULL;
+
+	if(has_year) {
+		ret->year = atoi(s_year_time);
+	} else {
+		//get current year
+		time_t t_now;
+		struct tm *t_info;
+		time(&t_now);
+		t_info = localtime(&t_now);
+		ret->year = 1900 + t_info->tm_year;
+
+		//get h:s
+
+		char *s_h = strtok_r(s_year_time, ":", &save2);
+		char *s_m = strtok_r(NULL, ":", &save2);
+
+		if(s_h != NULL) {
+			ret->hour = atoi(s_h);
+		}
+
+		if(s_m != NULL) {
+			ret->minute = atoi(s_m);
+		}
+	}
+
+	str_trim(s_month);
+
+	uint32_t *p_month = dict_get(__dict_months, s_month);
+	
+	if(p_month != NULL) {
+		ret->month = *p_month;
+	}
+
+	ret->day = atoi(s_day);
+
+	free(_in);
+
+	return ret;
+}
+
 //227 Entering Passive Mode (127,0,0,1,219,3)
 bool parse_pasv(const char *s_in, char *out_addr, uint32_t *out_port, char *out_unparsed) {
 	if((s_in == NULL) || (strlen(s_in) == 0)) {

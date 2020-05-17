@@ -1,3 +1,4 @@
+#include <openssl/evp.h>
 #include "general.h"
 #include "conn.h"
 #include "crypto.h"
@@ -36,7 +37,13 @@ void init() {
 	log_init();
 	msg_init();
 	ssl_init();
-	config_read("config.ini");
+
+	char *conf_path = expand_home_path("~/.mfxp/config.ini");
+	
+	if(!config_read(conf_path)) {
+		printf("failed to read config!\n");
+		exit(1);
+	}
 
 	//start ident thread
 	pthread_t ident_thread;
@@ -49,8 +56,27 @@ void destroy() {
 	log_cleanup();
 }
 
+void get_pw() {
+	char *pw = getpass("enter encryption key:");
+
+	if(strlen(pw) < 8) {
+		printf("encryption key has to be at least 8 chars long!\n");
+		exit(1);
+	}
+
+	unsigned int salt[] = {46124, 78314};
+
+	if(!aes_init((unsigned char *)pw, strlen(pw), (unsigned char *)&salt)) {
+		printf("Could not init the AES cipher\n");
+		exit(1);
+	}
+}
+
 int32_t main( int32_t argc, char **argv ) {
 	show_logo();
+
+	get_pw();	
+
 	init();
 	ui_init();
 	ui_loop();

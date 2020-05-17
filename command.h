@@ -32,3 +32,7 @@ void cmd_local_ls(char *line);
 void cmd_local_cd(char *line);
 void cmd_local_rm(char *line);
 void cmd_local_mkdir(char *line);
+
+void cmd_set_sort(char *line, char type);
+
+void cmd_sm(char *line);
