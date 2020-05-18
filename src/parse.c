@@ -58,6 +58,14 @@ struct date_info *parse_date(const char *in) {
 		return ret;
 	}
 
+	str_trim(s_month);
+
+	uint32_t *p_month = dict_get(__dict_months, s_month);
+	
+	if(p_month != NULL) {
+		ret->month = *p_month;
+	}
+
 	bool has_year = strstr(s_year_time, ":") == NULL;
 
 	if(has_year) {
@@ -82,14 +90,12 @@ struct date_info *parse_date(const char *in) {
 		if(s_m != NULL) {
 			ret->minute = atoi(s_m);
 		}
-	}
 
-	str_trim(s_month);
-
-	uint32_t *p_month = dict_get(__dict_months, s_month);
-	
-	if(p_month != NULL) {
-		ret->month = *p_month;
+		//stat -la doesnt show year if dir newer than 6 months
+		// - in this case we need to manually set year to -1
+		if(ret->month > (t_info->tm_mon+1)) {
+			ret->year--;
+		}
 	}
 
 	ret->day = atoi(s_day);

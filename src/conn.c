@@ -56,7 +56,12 @@ bool __control_send(struct site_info *site, char *data, bool force_plaintext) {
 	uint32_t n_sent = 0;
 	uint32_t n = 0;
 
-	log_w("%s",data);
+	//censor logging off PASS cmd
+	if(strncmp(data, "PASS", 4) == 0) {
+		log_w("PASS <<CENSORED>>\n");
+	} else {
+		log_w("%s",data);
+	}
 
 	while(n_sent < len) {
 		n = write_control_socket(site, data+n_sent, len-n_sent, force_plaintext);

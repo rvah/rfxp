@@ -1,6 +1,6 @@
 #pragma once
 #include "general.h"
-#include "libs/inih/ini.h"
+#include "ini.h"
 #include "skiplist.h"
 #include "priolist.h"
 #include "hilight.h"
