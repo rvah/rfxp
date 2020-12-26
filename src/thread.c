@@ -1,28 +1,25 @@
 #include "thread.h"
 
-void *thread_ident(void *ptr) {
-	ident_start();
-	return 0;
-}
+/*
+ * ----------------
+ *
+ * Private functions
+ *
+ * ----------------
+ */
 
-void *thread_indicator(void *ptr) {
-	indicator_start();
-
-	return 0;
-}
-
-uint32_t thread_gen_id() {
+uint32_t gen_id() {
 	static uint32_t id = 100;
 	return id++;
 }
 
-void thread_ui_handle_event(struct msg *m) {
+void ui_handle_event(struct msg *m) {
 	struct ui_log *d = m->data;
 
 	switch(m->event) {
 	case EV_UI_LOG:
 		usleep(100); //prevent ui bugs
-	
+
 		char *save_rl_line = rl_copy_text(0, rl_end);
 		rl_save_prompt();
 		rl_replace_line("", 0);
@@ -71,22 +68,11 @@ void thread_ui_handle_event(struct msg *m) {
 
 		break;
 	}
-	
+
 	free(m);
 }
 
-void *thread_ui(void *ptr) {
-	while(1) {
-		struct msg *m = msg_read(THREAD_ID_UI);
-
-		if(m != NULL) {
-			thread_ui_handle_event(m);
-		}
-	}
-	return 0;
-}
-
-void thread_site_handle_event(struct msg *m, struct site_info *s) {
+void site_handle_event(struct msg *m, struct site_info *s) {
 	switch(m->event) {
 	case EV_SITE_LS:
 		if(!s->ls_do_cache && !ftp_ls(s)) {
@@ -130,15 +116,6 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 			break;
 		}
 
-		/*int cmd_len = strlen((char *)m->data) + 7;
-		char *s_cmd = malloc(cmd_len);
-
-		snprintf(s_cmd, cmd_len, "CWD %s\r\n", (char *)m->data);
-
-		control_send(s, s_cmd);
-		code = control_recv(s);
-
-		if(code != 250) {*/
 		if(!ftp_cwd(s, (char *)m->data)) {
 			log_ui(s->thread_id, LOG_T_E, "Error changing directory\n");
 			break;
@@ -170,12 +147,10 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 		str_rtrim_slash((char *)m->data);
 		char *p_dir = str_get_path((char *)m->data);
 		char *p_filename = str_get_file((char *)m->data);
-		//printf("<<%s>>%s<<", p_dir, p_filename);
-		struct file_item *local_file = find_local_file(p_dir, p_filename);
+		struct file_item *local_file = filesystem_find_local_file(p_dir, p_filename);
 
 		if(local_file == NULL) {
 			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n", p_filename);
-			free(local_file);
 			break;
 		}
 
@@ -211,7 +186,7 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 		}
 
 		str_rtrim_slash((char *)m->data);
-		struct file_item *file = find_file(s->cur_dirlist, (char *)m->data);
+		struct file_item *file = filesystem_find_file(s->cur_dirlist, (char *)m->data);
 
 		if(file == NULL) {
 			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n", (char *)m->data);
@@ -249,7 +224,7 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 		}
 
 		str_rtrim_slash(farg->filename);
-		struct file_item *fxp_file = find_file(s->cur_dirlist, farg->filename);
+		struct file_item *fxp_file = filesystem_find_file(s->cur_dirlist, farg->filename);
 
 		if(fxp_file == NULL) {
 			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n", farg->filename);
@@ -285,8 +260,8 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 		}
 
 		str_rtrim_slash((char *)m->data);
-		struct file_item *rm_file = find_file(s->cur_dirlist, (char *)m->data);
-                                                                              
+		struct file_item *rm_file = filesystem_find_file(s->cur_dirlist, (char *)m->data);
+
 		if(rm_file == NULL) {
 			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n", (char *)m->data);
 			break;
@@ -335,9 +310,9 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 		int site_len = strlen((char *)m->data) + 8;
 		char *s_site = malloc(site_len);
 		snprintf(s_site, site_len, "SITE %s\r\n", (char *)m->data);
-		
-		control_send(s, s_site);	
-    	control_recv(s);
+
+		control_send(s, s_site);
+		control_recv(s);
 
 		log_ui(s->thread_id, LOG_T_I, "SITE Response:\n%s", s->last_recv);
 		break;
@@ -351,9 +326,9 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 		int qt_len = strlen((char *)m->data) + 3;
 		char *s_qt = malloc(qt_len);
 		snprintf(s_qt, qt_len, "%s\r\n", (char *)m->data);
-		
-		control_send(s, s_qt);	
-    	control_recv(s);
+
+		control_send(s, s_qt);
+		control_recv(s);
 
 		log_ui(s->thread_id, LOG_T_I, "Raw response:\n%s", s->last_recv);
 		break;
@@ -377,7 +352,7 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 		}
 
 		str_rtrim_slash((char *)m->data);
-		struct file_item *nfile = find_file(s->cur_dirlist, (char *)m->data);
+		struct file_item *nfile = filesystem_find_file(s->cur_dirlist, (char *)m->data);
 
 		if(nfile == NULL) {
 			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n", (char *)m->data);
@@ -409,11 +384,11 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 
 			while((c = fgetc(nfd)) != EOF) {
 				nfo_data[ni] = c;
-				ni++;				
+				ni++;
 			}
 
 			nfo_data[ni] = '\0'; //ensure 0 termination
-			
+
 			fclose(nfd);
 			unlink(nfo_path);
 			free(nfo_path);
@@ -435,9 +410,39 @@ void thread_site_handle_event(struct msg *m, struct site_info *s) {
 	free(m);
 }
 
+/*
+ * ----------------
+ *
+ * Public functions
+ *
+ * ----------------
+ */
+
+void *thread_ident(void *ptr) {
+	ident_start();
+	return 0;
+}
+
+void *thread_indicator(void *ptr) {
+	indicator_start();
+
+	return 0;
+}
+
+void *thread_ui(void *ptr) {
+	while(1) {
+		struct msg *m = msg_read(THREAD_ID_UI);
+
+		if(m != NULL) {
+			ui_handle_event(m);
+		}
+	}
+	return 0;
+}
+
 void *thread_site(void *ptr) {
 	struct site_info *site = (struct site_info*) ptr;
-	site->thread_id = thread_gen_id();
+	site->thread_id = gen_id();
 	log_ui(site->thread_id, LOG_T_I, "Connecting to %s..\n", site->name);
 
 	if(!ftp_connect(site)) {
@@ -458,18 +463,20 @@ void *thread_site(void *ptr) {
 		}
 	}
 
-	//if(!ftp_ls(site)) {
-	//	log_ui(site->thread_id, LOG_T_E, "Error listing directory\n");
-	//}
-
 	//thread main loop
 	while(1) {
 		struct msg *m = msg_read(site->thread_id);
 
 		if(m != NULL) {
-			thread_site_handle_event(m, site);
+			site_handle_event(m, site);
 		}
 	}
+
+	return 0;
+}
+
+void *thread_run_queue(void *ptr) {
+	queue_execute();
 
 	return 0;
 }

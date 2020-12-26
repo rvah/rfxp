@@ -10,18 +10,20 @@ CPPFLAGS := -Iinclude
 CFLAGS   := -std=gnu99 -Wall -g
 LDLIBS   := -lssl -lcrypto -lbsd -lreadline -lpthread
 
-.PHONY: all clean
+.PHONY: all clean tags
 
-all: $(EXE)
+all: $(EXE) tags
 
 $(EXE): $(OBJ)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
-
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 $(OBJ_DIR):
 	mkdir $@
 
+tags:
+	-ctags -R
+
 clean:
-	$(RM) $(OBJ)
+	$(RM) $(OBJ) $(EXE)

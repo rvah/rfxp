@@ -28,7 +28,7 @@ bool skiplist_init(const char *rule_s) {
 	if(rule_s == NULL) {
 		return false;
 	}
-	
+
 	char *save;
 
 	char *s = strtok_r(strdup(rule_s), " \r", &save);

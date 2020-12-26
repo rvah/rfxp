@@ -2,13 +2,13 @@
 
 static uint32_t __current_sort = SORT_TYPE_TIME_DESC;
 
-uint32_t filesystem_get_sort() {
-	return __current_sort;
-}
-
-void filesystem_set_sort(uint32_t sort) {
-	__current_sort = sort;
-}
+/*
+ * ----------------
+ *
+ * Private functions
+ *
+ * ----------------
+ */
 
 struct sort_node *az_comparator(void *a, void *b, bool asc) {
 	if(asc) {
@@ -107,7 +107,23 @@ void dirlist_sort(struct file_item **list, bool prio_sort) {
 	}
 }
 
-void file_item_destroy(struct file_item *item) {
+/*
+ * ----------------
+ *
+ * Private functions
+ *
+ * ----------------
+ */
+
+uint32_t filesystem_get_sort() {
+	return __current_sort;
+}
+
+void filesystem_set_sort(uint32_t sort) {
+	__current_sort = sort;
+}
+
+void filesystem_file_item_destroy(struct file_item *item) {
 	if(item == NULL) {
 		return;
 	}
@@ -121,7 +137,7 @@ void file_item_destroy(struct file_item *item) {
 	}
 }
 
-struct file_item *file_item_cpy(struct file_item * item) {
+struct file_item *filesystem_file_item_cpy(struct file_item * item) {
 	struct file_item *r_item = NULL;
 	struct file_item *first_item = NULL;
 
@@ -141,7 +157,7 @@ struct file_item *file_item_cpy(struct file_item * item) {
 	return first_item;
 }
 
-struct file_item *find_local_file(const char *path, const char *filename) {
+struct file_item *filesystem_find_local_file(const char *path, const char *filename) {
 	DIR *dir;
 	struct dirent *ent;
 	struct file_item *item = NULL;
@@ -149,7 +165,7 @@ struct file_item *find_local_file(const char *path, const char *filename) {
 	if ((dir = opendir (path)) != NULL) {
 		while ((ent = readdir (dir)) != NULL) {
 			if( (strlen(ent->d_name) == 0) ||
-				(strcmp(ent->d_name, ".") == 0) || 
+				(strcmp(ent->d_name, ".") == 0) ||
 				(strcmp(ent->d_name, "..") == 0)) {
 				continue;
 			}
@@ -171,7 +187,50 @@ struct file_item *find_local_file(const char *path, const char *filename) {
 	return item;
 }
 
-struct file_item *local_ls(char *path, bool prio_sort) {
+struct file_item *filesystem_filter_list(struct file_item *list, char *file_mask) {
+	if(list == NULL) {
+		return NULL;
+	}
+
+	struct file_item *f = NULL;
+	struct file_item *t = NULL;
+
+	while(list != NULL) {
+		if(match_rule(file_mask, list->file_name)) {
+			t = list->next;
+
+			if(f == NULL) {
+				list->next = NULL;
+				f = list;
+			} else {
+				list->next = f;
+				f = list;
+			}
+
+			list = t;
+		} else {
+			t = list;
+			list = list->next;
+			free(t);
+		}
+	}
+
+	return f;
+}
+
+struct file_item *filesystem_parse_list_filtered(char *text_list, char *file_mask) {
+	struct file_item *l = filesystem_parse_list(text_list);
+
+	return filesystem_filter_list(l, file_mask);
+}
+
+struct file_item *filesystem_local_ls_filtered(char *path, bool prio_sort, char *file_mask) {
+	struct file_item *l = filesystem_local_ls(path, prio_sort);
+
+	return filesystem_filter_list(l, file_mask);
+}
+
+struct file_item *filesystem_local_ls(char *path, bool prio_sort) {
 	DIR *dir;
 	struct dirent *ent;
 	struct file_item *list = NULL;
@@ -210,7 +269,7 @@ struct file_item *local_ls(char *path, bool prio_sort) {
 	return list;
 }
 
-struct file_item *find_file(struct file_item *list, const char *filename) {
+struct file_item *filesystem_find_file(struct file_item *list, const char *filename) {
 	if(list == NULL) {
 		return NULL;
 	}
@@ -225,7 +284,7 @@ struct file_item *find_file(struct file_item *list, const char *filename) {
 	return NULL;
 }
 
-void print_file_item(struct file_item *item) {
+void filesystem_print_file_item(struct file_item *item) {
 	printf("--- -  ->\n");
 	printf("Type: %d\n", item->file_type);
 	printf("Permissions: %s\n", item->permissions);
@@ -237,7 +296,7 @@ void print_file_item(struct file_item *item) {
 	printf("<-  - ---\n");
 }
 
-struct file_item *parse_list(char *text_list) {
+struct file_item *filesystem_parse_list(char *text_list) {
 	char *save;
 	char *line = strtok_r(text_list, "\n", &save);
 
@@ -267,7 +326,7 @@ struct file_item *parse_list(char *text_list) {
 			break;
 		}
 
-		struct file_item *item = parse_line(line);
+		struct file_item *item = filesystem_parse_line(line);
 
 		if(item == NULL) {
 			line = strtok_r(NULL, "\n", &save);
@@ -290,7 +349,7 @@ struct file_item *parse_list(char *text_list) {
 	return first_item;
 }
 
-struct file_item *parse_line(char *line) {
+struct file_item *filesystem_parse_line(char *line) {
 	if( (line[0] != '-') && (line[0] != 'd') && (line[0] != 'l')) {
 		return NULL;
 	}
@@ -306,7 +365,7 @@ struct file_item *parse_line(char *line) {
 
 	while(column != NULL) {
 		char *p;
-	
+
 		switch(i) {
 		//filetype+perm
 		case 0:
@@ -355,7 +414,7 @@ struct file_item *parse_line(char *line) {
 		case 7:
 			strlcat(item->date, " ", 13);
 			strlcat(item->date, column, 13);
-			
+
 			//full name is in saved ptr
 			item->file_name[0] = '\0';
 			strlcat(item->file_name, save, MAX_FILENAME_LEN);
@@ -369,12 +428,12 @@ struct file_item *parse_line(char *line) {
 		column = strtok_r(NULL, " \t", &save);
 		i++;
 	}
-	
+
 	str_trim(item->file_name);
 
 	//skip . and .. dirs, dont want to show those
 	if( (strlen(item->file_name) == 0) ||
-		(strcmp(item->file_name, ".") == 0) || 
+		(strcmp(item->file_name, ".") == 0) ||
 		(strcmp(item->file_name, "..") == 0)) {
 		free(item);
 		return NULL;

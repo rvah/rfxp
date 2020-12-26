@@ -1,5 +1,63 @@
 #include "command.h"
 
+/*
+ * ----------------
+ *
+ * Private functions
+ *
+ * ----------------
+ */
+
+char *get_arg(char *line, int i) {
+	char *save;
+	strtok_r(strdup(line), " \t", &save);
+	char *arg = NULL;
+
+	for(int j = 0; j < i; j++) {
+		arg = strtok_r(NULL, " \t", &save);
+	}
+
+	return arg;
+}
+
+char *get_arg_full(char *line, int i) {
+	char *save;
+	strtok_r(strdup(line), " \t", &save);
+
+	for(int j = 0; j < (i-1); j++) {
+		strtok_r(NULL, " \t", &save);
+	}
+
+	//trim
+	str_trim(save);
+
+	return save;
+}
+
+void bad_arg(char *cmd) {
+	printf("bad arg\n");
+}
+
+struct site_info *get_site(char which) {
+	struct site_pair *pair = site_get_current_pair();
+
+	if(which == 'l') {
+		return pair->left;
+	} else if (which == 'r') {
+		return pair->right;
+	}
+
+	return NULL;
+}
+
+/*
+ * ----------------
+ *
+ * Public functions
+ *
+ * ----------------
+ */
+
 //general commands
 void cmd_help(char *line) {
 	printf("\nGeneral commands:\n\n");
@@ -41,47 +99,7 @@ void cmd_help(char *line) {
 	printf("site <cmd>\t\t\t\tsend SITE command\n\n");
 }
 
-char *get_arg(char *line, int i) {
-	char *save;
-	strtok_r(strdup(line), " \t", &save);
-	char *arg = NULL;
 
-	for(int j = 0; j < i; j++) {
-		arg = strtok_r(NULL, " \t", &save);
-	}
-
-	return arg;
-}
-
-char *get_arg_full(char *line, int i) {
-	char *save;
-	strtok_r(strdup(line), " \t", &save);
-
-	for(int j = 0; j < (i-1); j++) {
-		strtok_r(NULL, " \t", &save);
-	}
-
-	//trim
-	str_trim(save);
-
-	return save;
-}
-
-void bad_arg(char *cmd) {
-	printf("bad arg\n");
-}
-
-struct site_info *cmd_get_site(char which) {
-	struct site_pair *pair = site_get_current_pair();
-
-	if(which == 'l') {
-		return pair->left;
-	} else if (which == 'r') {
-		return pair->right;
-	}
-
-	return NULL;
-}
 
 void cmd_execute(uint32_t thread_id, uint32_t event, void *data) {
 	struct msg *m = malloc(sizeof(struct msg));
@@ -96,7 +114,7 @@ void cmd_execute(uint32_t thread_id, uint32_t event, void *data) {
 */
 void cmd_open(char *line, char which) {
 	char *arg_site = get_arg(line, 1);
-	
+
 	if(which == ' ') {
 		printf("not implemented.\n");
 		return;
@@ -110,7 +128,7 @@ void cmd_open(char *line, char which) {
 	struct site_config *site_conf = get_site_config_by_name(arg_site);
 
 	if(site_conf == NULL) {
-		printf("could not find site %s.\n", arg_site);	
+		printf("could not find site %s.\n", arg_site);
 		return;
 	}
 
@@ -130,7 +148,7 @@ void cmd_open(char *line, char which) {
 	} else if(which == 'r') {
 		pair->right = s;
 	}
-	
+
 	pthread_create(&s->thread, NULL, thread_site, s);
 }
 
@@ -145,7 +163,7 @@ void cmd_close(char *line, char which) {
 
 	struct site_pair *pair = site_get_current_pair();
 
-	struct site_info *s;
+	struct site_info *s = NULL;
 
 	if(which == 'l') {
 		s = pair->left;
@@ -171,7 +189,7 @@ void cmd_close(char *line, char which) {
 
 //site specific commands
 void cmd_ls(char *line, char which) {
-	struct site_info *s = cmd_get_site(which);
+	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
 		printf("no site connected.\n");
@@ -186,8 +204,8 @@ void cmd_ref(char *line, char which) {
 }
 
 void cmd_cd(char *line, char which) {
-	struct site_info *s = cmd_get_site(which);
-	
+	struct site_info *s = get_site(which);
+
 	if(s == NULL) {
 		printf("no site connected.\n");
 		return;
@@ -200,11 +218,11 @@ void cmd_cd(char *line, char which) {
 		return;
 	}
 
-	cmd_execute(s->thread_id, EV_SITE_CWD, (void *)arg_path);	
+	cmd_execute(s->thread_id, EV_SITE_CWD, (void *)arg_path);
 }
 
 void cmd_put(char *line, char which) {
-	struct site_info *s = cmd_get_site(which);
+	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
 		printf("no site connected.\n");
@@ -222,7 +240,7 @@ void cmd_put(char *line, char which) {
 }
 
 void cmd_get(char *line, char which) {
-	struct site_info *s = cmd_get_site(which);
+	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
 		printf("no site connected.\n");
@@ -239,7 +257,7 @@ void cmd_get(char *line, char which) {
 }
 
 void cmd_rm(char *line, char which) {
-	struct site_info *s = cmd_get_site(which);
+	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
 		printf("no site connected.\n");
@@ -257,7 +275,7 @@ void cmd_rm(char *line, char which) {
 }
 
 void cmd_site(char *line, char which) {
-	struct site_info *s = cmd_get_site(which);
+	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
 		printf("no site connected.\n");
@@ -269,7 +287,7 @@ void cmd_site(char *line, char which) {
 }
 
 void cmd_quote(char *line, char which) {
-	struct site_info *s = cmd_get_site(which);
+	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
 		printf("no site connected.\n");
@@ -282,7 +300,7 @@ void cmd_quote(char *line, char which) {
 
 void cmd_fxp(char *line, char which) {
 	struct site_info *s = NULL;
-	struct site_info *d = NULL; 
+	struct site_info *d = NULL;
 
 	struct site_pair *pair = site_get_current_pair();
 
@@ -306,7 +324,7 @@ void cmd_fxp(char *line, char which) {
 	}
 
 	char *arg_path = get_arg_full(line, 1);
-	
+
 	if(arg_path == NULL) {
 		bad_arg("fxp");
 		return;
@@ -320,7 +338,7 @@ void cmd_fxp(char *line, char which) {
 }
 
 void cmd_mkdir(char *line, char which) {
-	struct site_info *s = cmd_get_site(which);
+	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
 		printf("no site connected.\n");
@@ -331,12 +349,12 @@ void cmd_mkdir(char *line, char which) {
 	cmd_execute(s->thread_id, EV_SITE_MKDIR, (void *)arg);
 }
 
-void cmd_quit(char *line, char which) {
+void cmd_quit(char *line) {
 	//TODO: proper cleanup needed :)
 	exit(0);
 }
 
-void cmd_log(char *line, char which) {
+void cmd_log(char *line) {
 	char *arg = get_arg(line, 1);
 
 	uint32_t n_lines = 50;
@@ -360,7 +378,7 @@ void cmd_log(char *line, char which) {
 }
 
 void cmd_nfo(char *line, char which) {
-	struct site_info *s = cmd_get_site(which);
+	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
 		printf("no site connected.\n");
@@ -395,7 +413,7 @@ void cmd_nfo(char *line, char which) {
 }
 
 void cmd_local_ls(char *line) {
-	struct file_item *fl = local_ls("./", false);
+	struct file_item *fl = filesystem_local_ls("./", false);
 	struct file_item *prev = NULL;
 
 	char cwd[PATH_MAX];
@@ -461,7 +479,7 @@ void cmd_local_mkdir(char *line) {
 	return;
 }
 
-void cmd_set_sort(char *line, char type) {
+void cmd_sort(char *line, char type) {
 	uint32_t cur_sort = filesystem_get_sort();
 	uint32_t new_sort;
 
@@ -492,11 +510,23 @@ void cmd_set_sort(char *line, char type) {
 	filesystem_set_sort(new_sort);
 }
 
+void cmd_nsort(char *line) {
+	cmd_sort(line, 'n');
+}
+
+void cmd_tsort(char *line) {
+	cmd_sort(line, 't');
+}
+
+void cmd_ssort(char *line) {
+	cmd_sort(line, 's');
+}
+
 void cmd_sm(char *line) {
 	char *cmd = get_arg(line, 1);
 	char *which_site;
 
-	if((cmd == NULL)) {
+	if(cmd == NULL) {
 		printf("bad args, please see help\n");
 		return;
 	}
@@ -549,7 +579,7 @@ void cmd_sm(char *line) {
 		strlcpy(new_site->user, user, 255);
 		strlcpy(new_site->host, host, 255);
 		strlcpy(new_site->port, port, 6);
-		
+
 		new_site->tls = true;
 		new_site->next = NULL;
 
@@ -635,6 +665,239 @@ void cmd_sm(char *line) {
 		printf("bad sm command, please see help\n");
 		return;
 	}
+}
 
-	
+void cmd_qput(char *line, char which) {
+	char *arg_path = get_arg(line, 1);
+
+	if(arg_path == NULL) {
+		bad_arg("qput");
+		return;
+	}
+
+	struct site_info *s = get_site(which);
+
+	if(s == NULL) {
+		printf("no site connected.\n");
+		return;
+	}
+
+	char *lpath = expand_full_local_path(arg_path);
+
+	if(lpath == NULL) {
+		printf("path does not exist.\n");
+		return;
+	}
+
+	queue_add_put(s, lpath, s->current_working_dir);
+}
+
+void cmd_qget(char *line, char which) {
+	char *arg_path = get_arg(line, 1);
+
+	if(arg_path == NULL) {
+		bad_arg("qget");
+		return;
+	}
+
+	struct site_info *s = get_site(which);
+
+	if(s == NULL) {
+		printf("no site connected.\n");
+		return;
+	}
+
+	char *rpath = expand_full_remote_path(arg_path, s->current_working_dir);
+
+	queue_add_get(s, rpath, realpath(".", NULL));
+}
+
+void cmd_qfxp(char *line, char which) {
+	char *arg_path = get_arg(line, 1);
+
+	if(arg_path == NULL) {
+		bad_arg("qfxp");
+		return;
+	}
+
+	struct site_info *s = NULL;
+	struct site_info *d = NULL;
+
+	struct site_pair *pair = site_get_current_pair();
+
+	if(which == 'l') {
+		s = pair->left;
+		d = pair->right;
+	} else {
+		s = pair->right;
+		d = pair->left;
+	}
+
+
+	if(s == NULL) {
+		printf("src site not connected.\n");
+		return;
+	}
+
+	if(d == NULL) {
+		printf("dst site not connected.\n");
+		return;
+	}
+
+	char *spath = expand_full_remote_path(arg_path, s->current_working_dir);
+
+	queue_add_fxp(s, d, spath, d->current_working_dir);
+}
+
+void cmd_qx(char *line) {
+	if(queue_running()) {
+		printf("error: queue already running.\n");
+		return;
+	}
+
+	pthread_t queue_thread;
+
+	pthread_create(&queue_thread, NULL, thread_run_queue, NULL);
+}
+
+void cmd_qls(char *line) {
+	queue_print();
+}
+
+void cmd_qrm(char *line) {
+	char *arg_id = get_arg(line, 1);
+
+	if(arg_id == NULL) {
+		bad_arg("qrm");
+		return;
+	}
+	queue_remove(atoi(arg_id));
+}
+
+void cmd_lls(char *line) {
+	cmd_ls(line, 'l');
+}
+
+void cmd_rls(char *line) {
+	cmd_ls(line, 'r');
+}
+
+void cmd_lref(char *line) {
+	cmd_ref(line, 'l');
+}
+
+void cmd_rref(char *line) {
+	cmd_ref(line, 'r');
+}
+
+void cmd_lcd(char *line) {
+	cmd_cd(line, 'l');
+}
+
+void cmd_rcd(char *line) {
+	cmd_cd(line, 'r');
+}
+
+void cmd_lput(char *line) {
+	cmd_put(line, 'l');
+}
+
+void cmd_rput(char *line) {
+	cmd_put(line, 'r');
+}
+
+void cmd_lget(char *line) {
+	cmd_get(line, 'l');
+}
+
+void cmd_rget(char *line) {
+	cmd_get(line, 'r');
+}
+
+void cmd_lrm(char *line) {
+	cmd_rm(line, 'l');
+}
+
+void cmd_rrm(char *line) {
+	cmd_rm(line, 'r');
+}
+
+void cmd_lsite(char *line) {
+	cmd_site(line, 'l');
+}
+
+void cmd_rsite(char *line) {
+	cmd_site(line, 'r');
+}
+
+void cmd_lquote(char *line) {
+	cmd_quote(line, 'l');
+}
+
+void cmd_rquote(char *line) {
+	cmd_quote(line, 'r');
+}
+
+void cmd_lopen(char *line) {
+	cmd_open(line, 'l');
+}
+
+void cmd_ropen(char *line) {
+	cmd_open(line, 'r');
+}
+
+void cmd_lclose(char *line) {
+	cmd_close(line, 'l');
+}
+
+void cmd_rclose(char *line) {
+	cmd_close(line, 'r');
+}
+
+void cmd_lfxp(char *line) {
+	cmd_fxp(line, 'l');
+}
+
+void cmd_rfxp(char *line) {
+	cmd_fxp(line, 'r');
+}
+
+void cmd_lmkdir(char *line) {
+	cmd_mkdir(line, 'l');
+}
+
+void cmd_rmkdir(char *line) {
+	cmd_mkdir(line, 'r');
+}
+
+void cmd_lnfo(char *line) {
+	cmd_nfo(line, 'l');
+}
+
+void cmd_rnfo(char *line) {
+	cmd_nfo(line, 'r');
+}
+
+void cmd_lqput(char *line) {
+	cmd_qput(line, 'l');
+}
+
+void cmd_rqput(char *line) {
+	cmd_qput(line, 'r');
+}
+
+void cmd_lqget(char *line) {
+	cmd_qget(line, 'l');
+}
+
+void cmd_rqget(char *line) {
+	cmd_qget(line, 'r');
+}
+
+void cmd_lqfxp(char *line) {
+	cmd_qfxp(line, 'l');
+}
+
+void cmd_rqfxp(char *line) {
+	cmd_qfxp(line, 'r');
 }

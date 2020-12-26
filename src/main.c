@@ -1,6 +1,6 @@
 #include <openssl/evp.h>
 #include "general.h"
-#include "conn.h"
+#include "control.h"
 #include "crypto.h"
 #include "filesystem.h"
 #include "site.h"

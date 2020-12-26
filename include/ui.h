@@ -5,6 +5,7 @@
 
 #include "command.h"
 #include "ui_helpers.h"
+#include "dictionary.h"
 
 #define UI_INPUT_MAX 2048
 

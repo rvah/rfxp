@@ -1,5 +1,25 @@
 #include "dictionary.h"
 
+/*
+ * ----------------
+ *
+ * Private functions
+ *
+ * ----------------
+ */
+
+uint32_t get_index(uint32_t key_hash) {
+	return key_hash % DICT_SIZE;
+}
+
+/*
+ * ----------------
+ *
+ * Public functions
+ *
+ * ----------------
+ */
+
 uint32_t dict_hash(const char *key) {
 	uint32_t hv = 0;
 
@@ -18,13 +38,9 @@ uint32_t dict_hash(const char *key) {
 	return hv;
 }
 
-uint32_t dict_get_index(uint32_t key_hash) {
-	return key_hash % DICT_SIZE;
-}
-
 bool dict_has_key(struct dict_node **dict, const char *key) {
 	uint32_t k_hash = dict_hash(key);
-	uint32_t index = dict_get_index(k_hash);
+	uint32_t index = get_index(k_hash);
 
 	struct dict_node *p = dict[index];
 
@@ -41,7 +57,7 @@ bool dict_has_key(struct dict_node **dict, const char *key) {
 
 void *dict_get(struct dict_node **dict, const char *key) {
 	uint32_t k_hash = dict_hash(key);
-	uint32_t index = dict_get_index(k_hash);
+	uint32_t index = get_index(k_hash);
 
 	struct dict_node *p = dict[index];
 
@@ -58,7 +74,7 @@ void *dict_get(struct dict_node **dict, const char *key) {
 
 void dict_set(struct dict_node **dict, const char *key, void *value) {
 	uint32_t k_hash = dict_hash(key);
-	uint32_t index = dict_get_index(k_hash);
+	uint32_t index = get_index(k_hash);
 
 	//if index is free, or if key is same, straight insert/replace
 	if( (dict[index] == NULL) || (dict[index]->key == k_hash) ) {

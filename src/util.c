@@ -1,5 +1,24 @@
 #include "util.h"
 
+char *concat_paths(const char *a, const char *b) {
+	char *tmp_a = strdup(a);
+	size_t len_b = strlen(b);
+
+	str_rtrim_slash(tmp_a);
+
+	if( (len_b > 0) && (b[0] == '/') ) {
+		b++;
+	}
+
+	size_t len = snprintf(NULL, 0, "%s/%s", tmp_a, b) + 1;
+	char *r = malloc(len);
+	snprintf(r, len, "%s/%s", tmp_a, b);
+
+	free(tmp_a);
+
+	return r;
+}
+
 char *expand_home_path(const char *in) {
 	char *d = strdup(in);
 	str_trim(d);
@@ -13,6 +32,68 @@ char *expand_home_path(const char *in) {
 	}
 
 	return d;
+}
+
+char *expand_full_remote_path(const char *in, const char *cwd) {
+	char *d = strdup(in);
+	str_trim(d);
+
+	char *p = d;
+
+	if( (p[0] == '.') && (p[1] == '/')) {
+		p += 2;
+	} else if(p[0] == '/') {
+		return d;
+	}
+
+	int n_len = strlen(p) + strlen(cwd) + 2;
+
+	char *s_new = malloc(n_len);
+
+	if(strcmp(cwd, "/") == 0) {
+		snprintf(s_new, n_len, "/%s", p);
+	} else {
+		snprintf(s_new, n_len, "%s/%s", cwd, p);
+	}
+
+	free(d);
+	return s_new;
+}
+
+char *expand_full_local_path(const char *in) {
+	char *d = expand_home_path(in);
+
+	if(d == NULL) {
+		return d;
+	}
+
+	char *dir = dirname(strdup(d));
+	char *file = basename(strdup(d));
+
+	free(d);
+
+	char *real = realpath(dir, NULL);
+
+	if(real == NULL) {
+		return NULL;
+	}
+
+	int flen = strlen(real)+strlen(file)+2;
+	char *ret = malloc(flen);
+
+	//prevent /// and // paths
+
+	if(strcmp(real, "/") == 0) {
+		if(strcmp(file, "/") == 0) {
+			snprintf(ret, flen, "%s", real);
+		} else {
+			snprintf(ret, flen, "%s%s", real, file);
+		}
+	} else {
+		snprintf(ret, flen, "%s/%s", real, file);
+	}
+
+	return ret;
 }
 
 bool __match_rule(const char *rule, const char *str, int ri, int si) {

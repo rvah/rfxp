@@ -2,7 +2,15 @@
 
 struct color_config *__color_conf = NULL;
 
-void colors_init() {
+/*
+ * ----------------
+ *
+ * Private functions
+ *
+ * ----------------
+ */
+
+void _colors_init() {
 	__color_conf = malloc(sizeof(struct color_config));
 
 	__color_conf->skip_file = __color_red;
@@ -12,13 +20,21 @@ void colors_init() {
 	__color_conf->file_type_symlink = __color_cyan;
 }
 
+/*
+ * ----------------
+ *
+ * Public functions
+ *
+ * ----------------
+ */
+
 struct color_config *colors_get_conf() {
 	return __color_conf;
 }
 
 void colors_set_setting(const char *name, const char *value) {
 	if(__color_conf == NULL) {
-		colors_init();
+		_colors_init();
 	}
 
 	char *v = strdup(value);

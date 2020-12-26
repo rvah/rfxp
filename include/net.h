@@ -14,6 +14,6 @@
 
 #define CONN_BACKLOG 20
 
-void *get_in_addr(struct sockaddr *sa);
-int32_t open_server_socket(char *port);
-int32_t open_socket(char *address, char *port);
+void *net_get_in_addr(struct sockaddr *sa);
+int32_t net_open_server_socket(char *port);
+int32_t net_open_socket(char *address, char *port);

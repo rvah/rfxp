@@ -1,13 +1,13 @@
 #include "net.h"
 
-// get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa) {
-	if (sa->sa_family == AF_INET) {
-		return &(((struct sockaddr_in*)sa)->sin_addr);
-	}
+/*
+ * ----------------
+ *
+ * Private functions
+ *
+ * ----------------
+ */
 
-	return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
 
 void sigchld_handler(int s) {
 	int saved_errno = errno;
@@ -17,7 +17,24 @@ void sigchld_handler(int s) {
 	errno = saved_errno;
 }
 
-int32_t open_server_socket(char *port) {
+/*
+ * ----------------
+ *
+ * Public functions
+ *
+ * ----------------
+ */
+
+// get sockaddr, IPv4 or IPv6:
+void *net_get_in_addr(struct sockaddr *sa) {
+	if (sa->sa_family == AF_INET) {
+		return &(((struct sockaddr_in*)sa)->sin_addr);
+	}
+
+	return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+
+int32_t net_open_server_socket(char *port) {
 	int32_t sockfd;
 	struct addrinfo hints, *servinfo, *p;
 	int32_t rv;
@@ -79,7 +96,7 @@ int32_t open_server_socket(char *port) {
 	return sockfd;	
 }
 
-int32_t open_socket(char *address, char *port) {
+int32_t net_open_socket(char *address, char *port) {
 	int32_t sockfd;
 	struct addrinfo hints, *servinfo, *p;
 	int32_t rv;
@@ -115,7 +132,7 @@ int32_t open_socket(char *address, char *port) {
 		return -1;
 	}
 
-	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
+	inet_ntop(p->ai_family, net_get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
 	log_w("client: connecting to %s\n", s);
 
 	freeaddrinfo(servinfo); // all done with this structure

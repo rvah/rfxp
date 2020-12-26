@@ -4,6 +4,7 @@
 
 #define THREAD_ID_UI 0
 #define THREAD_ID_IDENT 1
+#define THREAD_ID_QUEUE 2
 
 #define EV_SITE_LS 1
 #define EV_SITE_CWD 2

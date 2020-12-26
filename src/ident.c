@@ -40,7 +40,7 @@ void ident_start() {
 		return;
 	}
 
-	uint32_t sockfd = open_server_socket(ident_conf->port);
+	uint32_t sockfd = net_open_server_socket(ident_conf->port);
 	uint32_t newfd;
 	struct sockaddr_storage client_addr;
 	socklen_t sin_size;
@@ -62,7 +62,7 @@ void ident_start() {
 			continue;
 		}
 
-		inet_ntop(client_addr.ss_family, get_in_addr((struct sockaddr *)&client_addr), s, sizeof(s));
+		inet_ntop(client_addr.ss_family, net_get_in_addr((struct sockaddr *)&client_addr), s, sizeof(s));
 
 		//if always on not enabled, make sure some site is in connecting state
 		//- if not, close connection

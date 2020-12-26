@@ -1,10 +1,14 @@
 #pragma once
 #include "general.h"
 #include <ctype.h>
+#include <libgen.h>
 #include "transfer_result.h"
 #include "filesystem.h"
 
+char *concat_paths(const char *a, const char *b);
 char *expand_home_path(const char *in);
+char *expand_full_remote_path(const char *in, const char *cwd);
+char *expand_full_local_path(const char *in);
 bool match_rule(const char *rule, const char *str);
 void str_ltrim(char *s);
 void str_rtrim(char *s);

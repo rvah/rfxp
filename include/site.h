@@ -28,6 +28,7 @@ struct site_info {
 	bool use_tls;
 	SSL* secure_fd;
 	SSL* data_secure_fd;
+	bool is_secure;
 	char current_working_dir[MAX_PATH_LEN];
 	struct linked_str_node *cmd_list;
 	pthread_t thread;
@@ -53,13 +54,13 @@ struct site_pair {
 	struct site_info *right;
 };
 
+struct site_info *site_init(char *name, char *address, char *port, char *username, char *password, bool use_tls);
 void site_busy(struct site_info *site);
 void site_idle(struct site_info *site);
 void site_set_cwd(struct site_info *site, char *cwd);
 struct site_list *site_get_all();
 void site_destroy_list(struct site_list *list);
 struct site_list *site_get_sites_connecting();
-struct site_info *site_init(char *name, char *address, char *port, char *username, char *password, bool use_tls);
 void site_xdupe_add(struct site_info *site, const char *file);
 void site_xdupe_clear(struct site_info *site);
 bool site_xdupe_has(struct site_info *site, const char *file);

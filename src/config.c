@@ -2,11 +2,15 @@
 
 struct config *app_conf = NULL;
 
-struct config *config_get_conf() {
-	return app_conf;
-}
+/*
+ * ----------------
+ *
+ * Private functions
+ *
+ * ----------------
+ */
 
-bool config_init() {
+bool __config_init() {
 	app_conf = malloc(sizeof(struct config));
 	app_conf->sites = NULL;
 	app_conf->enable_xdupe = false;
@@ -46,63 +50,6 @@ void print_site_configs() {
 	}
 }
 
-void config_cleanup() {
-	if(app_conf->sites != NULL) {
-		struct site_config *p = app_conf->sites;
-		struct site_config *t;
-
-		while(p != NULL) {
-			t = p;
-			p = p->next;
-			free(t);
-		}
-	}
-
-	free(app_conf);
-}
-
-struct site_config *get_site_config(uint32_t id) {
-	struct site_config *p = app_conf->sites;
-
-	while(p != NULL) {
-		if(p->id == id) {
-			return p;
-		}
-
-		p = p->next;
-	}
-
-	return NULL;
-}
-
-struct site_config *get_site_config_by_name(char *name) {
-	struct site_config *p = app_conf->sites;
-
-	while(p != NULL) {
-		if(strcasecmp(p->name, name) == 0) {
-			return p;
-		}
-
-		p = p->next;
-	}
-
-	return NULL;
-}
-
-void add_site_config(struct site_config *conf) {
-	if(app_conf->sites == NULL) {
-		app_conf->sites = conf;
-		return;
-	}
-
-	struct site_config *p = app_conf->sites;
-	
-	while(p->next != NULL) {
-		p = p->next;
-	}
-	p->next = conf;
-}
-
 static int ini_read_handler(void* user, const char* section, const char* name, const char* value) {
 	char *save;
 	char *s_name = strtok_r(strdup(section), "_", &save);
@@ -127,7 +74,7 @@ static int ini_read_handler(void* user, const char* section, const char* name, c
 			char *s_xdupe = strdup(value);
 			str_trim(s_xdupe);
 			app_conf->enable_xdupe = strcmp(s_xdupe, "true") == 0;
-			free(s_xdupe);	
+			free(s_xdupe);
 		} else if(strcmp(name, "default_local_dir") == 0) {
 			char *d_val = strdup(value);
 			str_trim(d_val);
@@ -184,8 +131,78 @@ static int ini_read_handler(void* user, const char* section, const char* name, c
 	return 1;
 }
 
+/*
+ * ----------------
+ *
+ * Public functions
+ *
+ * ----------------
+ */
+
+struct config *config_get_conf() {
+	return app_conf;
+}
+
+void config_cleanup() {
+	if(app_conf->sites != NULL) {
+		struct site_config *p = app_conf->sites;
+		struct site_config *t;
+
+		while(p != NULL) {
+			t = p;
+			p = p->next;
+			free(t);
+		}
+	}
+
+	free(app_conf);
+}
+
+struct site_config *get_site_config(uint32_t id) {
+	struct site_config *p = app_conf->sites;
+
+	while(p != NULL) {
+		if(p->id == id) {
+			return p;
+		}
+
+		p = p->next;
+	}
+
+	return NULL;
+}
+
+struct site_config *get_site_config_by_name(char *name) {
+	struct site_config *p = app_conf->sites;
+
+	while(p != NULL) {
+		if(strcasecmp(p->name, name) == 0) {
+			return p;
+		}
+
+		p = p->next;
+	}
+
+	return NULL;
+}
+
+void add_site_config(struct site_config *conf) {
+	if(app_conf->sites == NULL) {
+		app_conf->sites = conf;
+		return;
+	}
+
+	struct site_config *p = app_conf->sites;
+
+	while(p->next != NULL) {
+		p = p->next;
+	}
+	p->next = conf;
+}
+
+
 bool config_read(char *path) {
-	if(!config_init()) {
+	if(!__config_init()) {
 		return false;
 	}
 
@@ -262,7 +279,7 @@ bool write_site_config_file(struct site_config *sites, const char *key) {
 		free(out_buf);
 		return false;
 	}
-	
+
 	free(enc_buf);
 	free(out_buf);
 	fclose(fp);
@@ -332,7 +349,7 @@ struct site_config *read_site_config_file(const char *key) {
 
 	for(int i = 0; i < head.n_sites; i++) {
 		struct site_config *new_site = malloc(site_len);
-		
+
 		memcpy(new_site, dec_buf+ofs, site_len);
 
 		ofs += site_len;
