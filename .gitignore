@@ -1,3 +1,10 @@
 *.ini
 *.pem
+*.o
+*.idx
+mfxp
+*.swp
+tags
+*.log
+compile_commands.json
 rfxp
