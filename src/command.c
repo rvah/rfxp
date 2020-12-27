@@ -73,7 +73,8 @@ void cmd_help(char *line) {
 	printf("rm <dir/file>\t\t\t\tdelete local file or directory\n");
 	printf("ssort\t\t\t\t\tsort according to size, run once for ASC, twice for DESC\n");
 	printf("tsort\t\t\t\t\tsort according to time, run once for ASC, twice for DESC\n");
-	printf("nsort\t\t\t\t\tsort according to file/dirname, run once for ASC, twice for DESC\n\n");
+	printf("nsort\t\t\t\t\tsort according to file/dirname, run once for ASC, twice for DESC\n");
+	printf("qx\t\t\t\t\texecute queue\n\n");
 
 	printf("Site manager commands:\n\n");
 	printf("sm add <name> <host:port> <user> <pass>\tadd site\n");
@@ -96,7 +97,10 @@ void cmd_help(char *line) {
 	printf("put <dir/file>\t\t\t\tupload file or directory\n");
 	printf("quote <raw cmd>\t\t\t\tsend raw command string to site\n");
 	printf("rm <file/dir>\t\t\t\tdelete file or directory on site\n");
-	printf("site <cmd>\t\t\t\tsend SITE command\n\n");
+	printf("site <cmd>\t\t\t\tsend SITE command\n");
+	printf("qput <dir/file>\t\t\t\tqueue file/dir for upload\n");
+	printf("qget <dir/file>\t\t\t\tqueue file/dir for download\n");
+	printf("qfxp <dir/file>\t\t\t\tqueue file/dir for fxp\n\n");
 }
 
 
