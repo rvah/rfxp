@@ -1,8 +1,8 @@
 #include "msg.h"
 
-struct msg *msg_q = NULL;
-pthread_mutex_t msg_mtx;
-pthread_cond_t msg_cond;
+static struct msg *msg_q = NULL;
+static pthread_mutex_t msg_mtx;
+static pthread_cond_t msg_cond;
 
 /*
  * ----------------

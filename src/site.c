@@ -1,6 +1,6 @@
 #include "site.h"
 
-struct site_pair *current_pair = NULL;
+static struct site_pair *current_pair = NULL;
 
 /*
  * ----------------

@@ -1,7 +1,7 @@
 #include "log.h"
 
-FILE *logfd;
-pthread_mutex_t log_mtx;
+static FILE *logfd;
+static pthread_mutex_t log_mtx;
 
 bool log_init() {
 	if(pthread_mutex_init(&log_mtx, NULL) != 0) {

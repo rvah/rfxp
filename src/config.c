@@ -1,6 +1,6 @@
 #include "config.h"
 
-struct config *app_conf = NULL;
+static struct config *app_conf = NULL;
 
 /*
  * ----------------

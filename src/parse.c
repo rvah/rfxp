@@ -1,6 +1,6 @@
 #include "parse.h"
 
-struct dict_node **__dict_months = NULL;
+static struct dict_node **__dict_months = NULL;
 
 struct date_info *parse_date(const char *in) {
 	//supported formats

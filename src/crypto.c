@@ -1,7 +1,7 @@
 #include "crypto.h"
 
-EVP_CIPHER_CTX *__evp_en;
-EVP_CIPHER_CTX *__evp_de;
+static EVP_CIPHER_CTX *__evp_en;
+static EVP_CIPHER_CTX *__evp_de;
 
 void ssl_init() {
 	SSL_library_init();

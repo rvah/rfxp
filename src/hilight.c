@@ -1,6 +1,6 @@
 #include "hilight.h"
 
-struct hilight_rule *hilight_rules = NULL;
+static struct hilight_rule *hilight_rules = NULL;
 
 bool hilight_init(const char *rule_s) {
 	if(rule_s == NULL) {

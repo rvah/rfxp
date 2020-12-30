@@ -8,8 +8,8 @@
  * ----------------
  */
 
-struct dict_node **__cmd_lut;
-struct linked_str_node *__cmd_list;
+static struct dict_node **__cmd_lut;
+static struct linked_str_node *__cmd_list;
 
 static void dict_and_list_set(struct dict_node **dict, const char *key, void *value) {
 	struct linked_str_node *item = malloc(sizeof(struct linked_str_node));

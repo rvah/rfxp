@@ -1,6 +1,6 @@
 #include "ident.h"
 
-struct ident_config *ident_conf = NULL;
+static struct ident_config *ident_conf = NULL;
 
 void ident_set_setting(const char *name, const char *value) {
 	if(ident_conf == NULL) {

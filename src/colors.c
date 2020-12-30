@@ -1,6 +1,6 @@
 #include "colors.h"
 
-struct color_config *__color_conf = NULL;
+static struct color_config *__color_conf = NULL;
 
 /*
  * ----------------

@@ -1,6 +1,6 @@
 #include "skiplist.h"
 
-struct skiplist_rule *skiplist_rules = NULL;
+static struct skiplist_rule *skiplist_rules = NULL;
 
 void skiplist_print() {
 	struct skiplist_rule *p = skiplist_rules;

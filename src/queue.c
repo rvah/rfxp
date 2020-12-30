@@ -1,8 +1,8 @@
 #include "queue.h"
 
-struct queue_item *__transfer_queue = NULL;
-bool __queue_running = false;
-uint32_t __id = 0;
+static struct queue_item *__transfer_queue = NULL;
+static bool __queue_running = false;
+static uint32_t __id = 0;
 
 /*
  * ----------------

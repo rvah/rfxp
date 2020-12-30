@@ -1,6 +1,6 @@
 #include "priolist.h"
 
-struct priolist_rule *priolist_rules = NULL;
+static struct priolist_rule *priolist_rules = NULL;
 
 bool priolist_init(const char *rule_s) {
     if(rule_s == NULL) {
