@@ -117,6 +117,7 @@ struct stats_transfer *stats_transfer_create() {
 	gettimeofday(&r->t_end, NULL);
 	r->tot_avg_speed = 0.0;
 	r->cur_avg_speed = 0.0;
+	r->tot_bytes_sent = 0;
 
 	return r;
 }

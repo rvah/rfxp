@@ -1,4 +1,5 @@
 #include "io.h"
+#include <bits/stdint-uintn.h>
 
 static ssize_t default_file_reader(struct io_item *src, uint8_t *buf) {
 	if(src->local_fd == NULL) {
@@ -37,7 +38,7 @@ static ssize_t default_file_writer(
 	if(src->local_fd == NULL) {
 		log_w("error opening file for writing\n");
 		return -1;
-	} 
+	}
 
 	if(fwrite(buf, sizeof(uint8_t), n, src->local_fd) != n) {
 		log_w("error writing data\n");
@@ -68,7 +69,8 @@ static ssize_t default_ftp_writer(
 	return n_sent_tot;
 }
 
-static ssize_t (*ftp_writer)(struct io_item *, uint8_t *, ssize_t n) = default_ftp_writer;
+static ssize_t (*ftp_writer)(
+		struct io_item *, uint8_t *, ssize_t n) = default_ftp_writer;
 
 static void close_local(struct io_item *item) {
 	if(item->local_fd != NULL) {
@@ -91,12 +93,28 @@ static void close_remote(struct io_item *item) {
 	net_close_socket(item->site->data_socket_fd);
 }
 
-void io_close(struct io_item *item) {
+static void io_close(struct io_item *item) {
 	if(item->type == io_type_LOCAL) {
 		close_local(item);
 	} else {
 		close_remote(item);
 	}
+}
+
+void io_set_file_reader(ssize_t (*r)(struct io_item *, uint8_t *)) {
+	file_reader = r;
+}
+
+void io_set_ftp_reader(ssize_t (*r)(struct io_item *, uint8_t *)) {
+	ftp_reader = r;
+}
+
+void io_set_file_writer(ssize_t (*w)(struct io_item *, uint8_t *, ssize_t)) {
+	file_writer = w;
+}
+
+void io_set_ftp_writer(ssize_t (*w)(struct io_item *, uint8_t *, ssize_t)) {
+	ftp_writer = w;
 }
 
 ssize_t io_transfer_data(struct io_item *src, struct io_item *dst,
@@ -144,7 +162,7 @@ ssize_t io_transfer_data(struct io_item *src, struct io_item *dst,
 	return w_total;
 }
 
-struct io_item *io_item_create_local(char *path) {
+struct io_item *io_item_create_local(const char *path) {
 	struct io_item *r = malloc(sizeof(struct io_item));
 	r->type = io_type_LOCAL;
 	r->local_fd = NULL;
@@ -163,6 +181,10 @@ struct io_item *io_item_create_remote(struct site_info *site) {
 }
 
 void io_item_destroy(struct io_item *item) {
+	if(item == NULL) {
+		return;
+	}
+
 	free(item->path);
 	free(item);
 }

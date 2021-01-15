@@ -5,6 +5,7 @@ struct transfer_result *transfer_result_create(bool succ, char *filename, uint64
 
 	r->next = NULL;
 	r->success = succ;
+	r->n_transferred = 0;
 	r->filename = strdup(filename);
 	r->size = size;
 	r->speed = speed;

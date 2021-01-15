@@ -45,6 +45,7 @@ struct file_item {
 	bool hilight;
 };
 
+void filesystem_set_local_lister(char *(*lister)(const char *));
 uint32_t filesystem_get_sort();
 void filesystem_set_sort(uint32_t sort);
 void filesystem_file_item_destroy(struct file_item * item);

@@ -1,4 +1,12 @@
 #include "test_ftp.h"
+#include "filesystem.h"
+#include "ftp.h"
+#include "io.h"
+#include "mock_filesystem.h"
+#include "mock_io.h"
+#include "mock_net.h"
+#include "transfer_result.h"
+#include <bits/stdint-uintn.h>
 
 /*
 bool ftp_connect(struct site_info *site);
@@ -27,6 +35,7 @@ static struct site_info *get_site_a(bool secure) {
 }
 
 void test_ftp_connect() {
+	TEST_IGNORE();
 }
 
 void test_ftp_retr() {
@@ -423,6 +432,7 @@ void test_ftp_auth_secure() {
 }
 
 void test_ftp_auth_insecure() {
+	TEST_IGNORE();
 //	test_ftp_auth(false);
 }
 
@@ -499,19 +509,154 @@ void test_ftp_pasv() {
 	TEST_ASSERT_TRUE(succ2->port == 181*256+107);
 }
 
+uint8_t *create_random_data(size_t n) {
+	uint8_t *d = malloc(sizeof(uint8_t) * n);
+
+	for(size_t i =0; i < n; i++) {
+		d[i] = rand() % 0xFF;
+	}
+
+	return d;
+}
+
+uint8_t *create_empty_data(size_t n) {
+	uint8_t *d = malloc(sizeof(uint8_t) * n);
+
+	return d;
+}
+
 void test_ftp_get() {
+	mock_net_reset();
+	mock_filesystem_reset();
+
+	struct site_info *site = get_site_a(false);
+	mock_filesystem_set_local_list_buffer(
+		"total 8\n"
+		"drwxr-xr-x 2 m m 4096 Jan 15 17:09 .\n"
+		"drwxrwxrwx 6 m m 4096 Jan 15 17:09 ..\n"
+		"-rw-r--r-- 1 m m    0 Jan 15 17:09 one.txt\n"
+		"-rw-r--r-- 1 m m    0 Jan 15 17:09 three.bin\n"
+		"-rw-r--r-- 1 m m    0 Jan 15 17:09 two.txt\n");
+
+	site->cur_dirlist = filesystem_parse_list(
+		"total 8\n"
+		"drwxr-xr-x 2 m m 4096 Jan 15 17:09 .\n"
+		"drwxrwxrwx 6 m m 4096 Jan 15 17:09 ..\n"
+		"-rw-r--r-- 1 m m    0 Jan 15 17:09 one.txt\n"
+		"-rw-r--r-- 1 m m    0 Jan 15 17:09 three.bin\n"
+		"-rw-r--r-- 1 m m    0 Jan 15 17:09 two.txt\n",
+		GLFTPD);
+
+	char *request[] = {
+		"PROT P\r\n",
+		"PASV\r\n",
+		"RETR /three.bin\r\n"
+	};
+
+	char *response[] = {
+		"200 Protection set to Private\n",
+		"227 Entering Passive Mode (127,0,0,1,174,145)\n",
+		"150 Opening BINARY mode data connection for /three.bin (5334 bytes) using SSL/TLS.\n",
+		"226- [Ul: 737.4MiB] [Dl: 1861.1MiB] [Speed: 786.00KiB/s] [Free: 406159MB]\n"
+		"226  [Section: DEFAULT] [Credits: 14.6MiB] [Ratio: UL&DL: Unlimited]\n"
+	};
+
+	mock_net_set_socket_response(response);
+	mock_net_set_socket_request(request);
+
+	size_t file_n = 1024*1024*5;
+	uint8_t *file_src = create_random_data(file_n);
+	uint8_t *file_dst = create_empty_data(file_n);
+
+	mock_io_set_ftp_buffer(file_src, file_n);
+	mock_io_set_file_buffer(file_dst, file_n);
+
+	//verify skipping of files that exists
+	struct transfer_result *fail1 = ftp_get(site, "three.bin", "/", "/");
+
+	mock_filesystem_set_local_list_buffer(
+		"total 8\n"
+		"drwxr-xr-x 2 m m 4096 Jan 15 17:09 .\n"
+		"drwxrwxrwx 6 m m 4096 Jan 15 17:09 ..\n"
+		"-rw-r--r-- 1 m m    0 Jan 15 17:09 two.txt\n");
+
+	struct transfer_result *succ1 = ftp_get(site, "three.bin", "/", "/");
+
+	TEST_ASSERT_TRUE(fail1->success && fail1->skipped);
+	TEST_ASSERT_TRUE(succ1->success && !succ1->skipped);
+
+	TEST_ASSERT_EQUAL_UINT8_ARRAY(file_src, file_dst, file_n);
+
+	free(file_src);
+	free(file_dst);
 }
 
 void test_ftp_put() {
+	mock_net_reset();
+	mock_filesystem_reset();
+
+	struct site_info *site = get_site_a(false);
+	mock_filesystem_set_local_list_buffer(
+		"total 8\n"
+		"drwxr-xr-x 2 m m 4096 Jan 15 17:09 .\n"
+		"drwxrwxrwx 6 m m 4096 Jan 15 17:09 ..\n"
+		"-rw-r--r-- 1 m m    0 Jan 15 17:09 one.txt\n"
+		"-rw-r--r-- 1 m m    0 Jan 15 17:09 three.bin\n"
+		"-rw-r--r-- 1 m m    0 Jan 15 17:09 two.txt\n");
+
+	site->cur_dirlist = filesystem_parse_list(
+		"total 8\n"
+		"drwxr-xr-x 2 m m 4096 Jan 15 17:09 .\n"
+		"drwxrwxrwx 6 m m 4096 Jan 15 17:09 ..\n"
+		"-rw-r--r-- 1 m m    0 Jan 15 17:09 three.bin\n"
+		"-rw-r--r-- 1 m m    0 Jan 15 17:09 two.txt\n",
+		GLFTPD);
+
+	char *request[] = {
+		"PROT P\r\n",
+		"PASV\r\n",
+		"STOR /one.txt\r\n"
+	};
+
+	char *response[] = {
+		"200 Protection set to Private\n",
+		"227 Entering Passive Mode (127,0,0,1,174,145)\n",
+		"150 Opening BINARY mode data connection for one.txt using SSL/TLS.\n",
+		"226- [Ul: 737.4MiB] [Dl: 1861.1MiB] [Speed: 786.00KiB/s] [Free: 406159MB]\n"
+		"226  [Section: DEFAULT] [Credits: 14.6MiB] [Ratio: UL&DL: Unlimited]\n"
+	};
+
+	mock_net_set_socket_response(response);
+	mock_net_set_socket_request(request);
+
+	size_t file_n = 1024*1024*5;
+	uint8_t *file_src = create_random_data(file_n);
+	uint8_t *file_dst = create_empty_data(file_n);
+
+	mock_io_set_ftp_buffer(file_src, file_n);
+	mock_io_set_file_buffer(file_dst, file_n);
+
+	struct transfer_result *succ1 = ftp_put(site, "one.txt", "/" ,"/");
+
+	TEST_ASSERT_TRUE(succ1->success && !succ1->skipped);
+
+	TEST_ASSERT_EQUAL_UINT8_ARRAY(file_src, file_dst, file_n);
+
+	free(file_src);
+	free(file_dst);
 }
 
 void test_ftp_get_recursive() {
+	TEST_IGNORE();
 }
 
 void test_ftp_put_recursive() {
+	TEST_IGNORE();
 }
 
 void test_run_ftp() {
+	srand (time(NULL));
+
 	net_set_socket_opener(mock_net_socket_opener);
 	net_set_socket_secure_opener(mock_net_socket_secure_opener);
 	net_set_socket_closer(mock_net_socket_closer);
@@ -519,6 +664,11 @@ void test_run_ftp() {
 	net_set_socket_sender(mock_net_socket_sender);
 	net_set_socket_secure_receiver(mock_net_socket_secure_receiver);
 	net_set_socket_secure_sender(mock_net_socket_secure_sender);
+	io_set_file_reader(mock_io_file_reader);
+	io_set_ftp_reader(mock_io_ftp_reader);
+	io_set_file_writer(mock_io_file_writer);
+	io_set_ftp_writer(mock_io_ftp_writer);
+	filesystem_set_local_lister(mock_filesystem_local_lister);
 
 	RUN_TEST(test_ftp_connect);
 	RUN_TEST(test_ftp_retr);

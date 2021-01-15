@@ -272,6 +272,87 @@ struct file_item *parse_list(const char *text_list,
 	return first_item;
 }
 
+static char *default_local_lister(const char *path) {
+	size_t buf_len = 1024;
+	size_t s_tlen = 0;
+
+	char *out = malloc(buf_len);
+	out[0] = '\0';
+
+	DIR *dir;
+	struct dirent *ent;
+
+	if((dir = opendir(path)) == NULL) {
+		goto _filesystem_local_list_err;
+	}
+
+	char *fmt = "%crwxrwxrwx 1 %d %d %d %s %s\n";
+
+	while ((ent = readdir (dir)) != NULL) {
+		/*
+			stat -la format:
+			drwxr-xr-x  14 glftpd   glftpd       4096 Nov 13 14:17 ..
+			-rw-r--r--   1 user     NoGroup      5334 Dec 23 15:23 c.c
+		*/
+
+		char *full_path = path_append_file(path, ent->d_name);
+		struct stat s_stat;
+
+		if(lstat(full_path, &s_stat) == -1) {
+			printf("error: could not read file: %s\n", full_path);
+			free(full_path);
+			continue;
+		}
+
+		char type = '-';
+		uint32_t mode = s_stat.st_mode & S_IFMT;
+
+		switch(mode) {
+		case S_IFDIR:
+			type = 'd';
+			break;
+		case S_IFREG:
+			type = '-';
+			break;
+		case S_IFLNK:
+			type = 'l';
+			break;
+		default:
+			break;
+		}
+
+		char *f_time = time_to_stat_str(s_stat.st_mtime);
+		char s_len = snprintf(NULL, 0, fmt, type, s_stat.st_uid, s_stat.st_gid,
+				s_stat.st_size, f_time, ent->d_name) + 1;
+
+		char *s_fmt = malloc(s_len);
+		snprintf(s_fmt, s_len, fmt, type, s_stat.st_uid, s_stat.st_gid,
+				s_stat.st_size, f_time, ent->d_name);
+
+		s_tlen += s_len;
+
+		if(s_tlen > buf_len) {
+			buf_len += 1024;
+			out = realloc(out, buf_len);
+		}
+
+		strlcat(out, s_fmt, buf_len);
+
+		free(s_fmt);
+		free(full_path);
+		free(f_time);
+
+	}
+
+	return out;
+
+_filesystem_local_list_err:
+	free(out);
+	return "";
+}
+
+static char *(*local_lister)(const char *path) = default_local_lister;
+
 /*
  * ----------------
  *
@@ -279,6 +360,10 @@ struct file_item *parse_list(const char *text_list,
  *
  * ----------------
  */
+
+void filesystem_set_local_lister(char *(*lister)(const char *)) {
+	local_lister = lister;
+}
 
 uint32_t filesystem_get_sort() {
 	return __current_sort;
@@ -371,83 +456,9 @@ struct file_item *filesystem_filter_list(struct file_item *list, char *file_mask
 	return f;
 }
 
+
 char *filesystem_local_list(const char *path) {
-	size_t buf_len = 1024;
-	size_t s_tlen = 0;
-
-	char *out = malloc(buf_len);
-	out[0] = '\0';
-
-	DIR *dir;
-	struct dirent *ent;
-
-	if((dir = opendir(path)) == NULL) {
-		goto _filesystem_local_list_err;
-	}
-
-	char *fmt = "%crwxrwxrwx 1 %d %d %d %s %s\n";
-
-	while ((ent = readdir (dir)) != NULL) {
-		/*
-			stat -la format:
-			drwxr-xr-x  14 glftpd   glftpd       4096 Nov 13 14:17 ..
-			-rw-r--r--   1 user     NoGroup      5334 Dec 23 15:23 c.c
-		*/
-
-		char *full_path = path_append_file(path, ent->d_name);
-		struct stat s_stat;
-
-		if(lstat(full_path, &s_stat) == -1) {
-			printf("error: could not read file: %s\n", full_path);
-			free(full_path);
-			continue;
-		}
-
-		char type = '-';
-		uint32_t mode = s_stat.st_mode & S_IFMT;
-
-		switch(mode) {
-		case S_IFDIR:
-			type = 'd';
-			break;
-		case S_IFREG:
-			type = '-';
-			break;
-		case S_IFLNK:
-			type = 'l';
-			break;
-		default:
-			break;
-		}
-
-		char *f_time = time_to_stat_str(s_stat.st_mtime);
-		char s_len = snprintf(NULL, 0, fmt, type, s_stat.st_uid, s_stat.st_gid,
-				s_stat.st_size, f_time, ent->d_name) + 1;
-
-		char *s_fmt = malloc(s_len);
-		snprintf(s_fmt, s_len, fmt, type, s_stat.st_uid, s_stat.st_gid,
-				s_stat.st_size, f_time, ent->d_name);
-
-		s_tlen += s_len;
-
-		if(s_tlen > buf_len) {
-			buf_len += 1024;
-			out = realloc(out, buf_len);
-		}
-
-		strlcat(out, s_fmt, buf_len);
-
-		free(s_fmt);
-		free(full_path);
-		free(f_time);
-
-	}
-
-	return out;
-
-_filesystem_local_list_err:
-	free(out);
-	return "";
+	return local_lister(path);
 }
 
 void filesystem_print_file_item(struct file_item *item) {

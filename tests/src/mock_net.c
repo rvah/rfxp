@@ -14,7 +14,7 @@ static uint32_t request_index = 0;
 static uint32_t response_index = 0;
 
 static ssize_t request_socket(const void *buf, size_t n) {
-	printf("---CMP---\n%s\n%s\n", (char *)buf, request[request_index]);
+	printf("---CMP S---\n%s\n%s\n---CMP E---\n", (char *)buf, request[request_index]);
 	if(strcmp(buf, request[request_index++]) != 0) {
 		return -1;
 	}

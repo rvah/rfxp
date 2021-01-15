@@ -15,10 +15,8 @@ bool valid_str_arg(const char *str) {
 }
 
 bool open_data(struct site_info *site) {
-	if(!site->prot_sent) {
-		if(!ftp_prot(site)) {
-			return false;
-		}
+	if(!site->prot_sent && !ftp_prot(site)) {
+		return false;
 	}
 
 	struct pasv_details *pv = ftp_pasv(site, false);
