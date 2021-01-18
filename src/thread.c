@@ -77,12 +77,12 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 	switch(m->event) {
 	case EV_SITE_LS:
 		if(!s->ls_do_cache && !ftp_ls(s)) {
-			log_ui(s->thread_id, LOG_T_E, "Error listing directory\n");
+			log_ui_e("Error listing directory\n");
 			break;
 		}
 
 		struct file_item *fl = s->cur_dirlist;
-		log_ui(s->thread_id, LOG_T_I, TCOL_GREEN "[%s]:\n" TCOL_RESET,
+		log_ui_i(TCOL_GREEN "[%s]:\n" TCOL_RESET,
 				s->current_working_dir);
 
 		const char *color = __color_white;
@@ -107,7 +107,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 				}
 			}
 
-			log_ui(s->thread_id, LOG_T_I, generate_ui_dirlist_item(color, fl));
+			log_ui_i(generate_ui_dirlist_item(color, fl));
 
 			fl = fl->next;
 		}
@@ -119,12 +119,12 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		}
 
 		if(!ftp_cwd(s, (char *)m->data)) {
-			log_ui(s->thread_id, LOG_T_E, "Error changing directory\n");
+			log_ui_e("Error changing directory\n");
 			break;
 		}
 
 		if(!ftp_ls(s)) {
-			log_ui(s->thread_id, LOG_T_E, "Error listing directory\n");
+			log_ui_e("Error listing directory\n");
 			break;
 		}
 
@@ -139,7 +139,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		break;
 	case EV_SITE_CLOSE:
 		ftp_disconnect(s);
-		log_ui(s->thread_id, LOG_T_I, "connection closed.\n");
+		log_ui_i("connection closed.\n");
 		break;
 	case EV_SITE_PUT:
 		if(m->data == NULL) {
@@ -158,7 +158,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		free(s_list);
 
 		if(local_file == NULL) {
-			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n",
+			log_ui_e("%s: no such file exists!\n",
 					p_filename);
 			break;
 		}
@@ -167,30 +167,26 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		free(local_file);
 
 		if(filetype == FILE_TYPE_LINK) {
-			log_ui(s->thread_id, LOG_T_W,
-					"%s: no support for uploading symlinks yet\n", p_filename);
+			log_ui_w("%s: no support for uploading symlinks yet\n", p_filename);
 			break;
 		} else if(filetype == FILE_TYPE_FILE) {
 			if(!transfer_succ(ftp_put(s, p_filename, p_dir,
 					s->current_working_dir))) {
-				log_ui(s->thread_id, LOG_T_E, "%s: upload failed!\n",
-						p_filename);
+				log_ui_e("%s: upload failed!\n", p_filename);
 				break;
 			}
 		} else if(filetype == FILE_TYPE_DIR) {
 			if(!transfer_succ(ftp_put_recursive(s, p_filename, p_dir,
 						s->current_working_dir))) {
-				log_ui(s->thread_id, LOG_T_E, "%s: recursive upload failed!\n",
-						p_filename);
+				log_ui_e("%s: recursive upload failed!\n", p_filename);
 				break;
 			}
 		} else {
-			log_ui(s->thread_id, LOG_T_E, "%s: unknown file type!\n",
-					p_filename);
+			log_ui_e("%s: unknown file type!\n", p_filename);
 			break;
 		}
 
-		log_ui(s->thread_id, LOG_T_I, "%s: upload complete\n", p_filename);
+		log_ui_i("%s: upload complete\n", p_filename);
 		free(p_dir);
 		free(p_filename);
 		break;
@@ -205,38 +201,32 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 				(char *)m->data);
 
 		if(file == NULL) {
-			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n",
-					(char *)m->data);
+			log_ui_e("%s: no such file exists!\n", (char *)m->data);
 			break;
 		}
 
 		if(file->file_type == FILE_TYPE_LINK) {
-			log_ui(s->thread_id, LOG_T_W,
-					"%s: no support for downloading symlinks yet\n",
+			log_ui_w("%s: no support for downloading symlinks yet\n",
 					(char *)m->data);
 			break;
 		} else if(file->file_type == FILE_TYPE_FILE) {
 			if(!transfer_succ(ftp_get(s, (char *)m->data, "./",
 					s->current_working_dir))) {
-				log_ui(s->thread_id, LOG_T_E, "%s: download failed!\n",
-						(char *)m->data);
+				log_ui_e("%s: download failed!\n", (char *)m->data);
 				break;
 			}
 		} else if(file->file_type == FILE_TYPE_DIR) {
 			if(!transfer_succ(ftp_get_recursive(s, (char *)m->data, "./",
 					s->current_working_dir))) {
-				log_ui(s->thread_id, LOG_T_E,
-						"%s: recursive download failed!\n", (char *)m->data);
+				log_ui_e("%s: recursive download failed!\n", (char *)m->data);
 				break;
 			}
 		} else {
-			log_ui(s->thread_id, LOG_T_E, "%s: unknown file type!\n",
-					(char *)m->data);
+			log_ui_e("%s: unknown file type!\n", (char *)m->data);
 			break;
 		}
 
-		log_ui(s->thread_id, LOG_T_I, "%s: download complete\n",
-				(char *)m->data);
+		log_ui_i("%s: download complete\n", (char *)m->data);
 
 		break;
 
@@ -253,37 +243,31 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 				farg->filename);
 
 		if(fxp_file == NULL) {
-			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n",
-					farg->filename);
+			log_ui_e("%s: no such file exists!\n", farg->filename);
 			break;
 		}
 
 		if(fxp_file->file_type == FILE_TYPE_LINK) {
-			log_ui(s->thread_id, LOG_T_W,
-					"%s: no support for fxping symlinks yet\n",
-					farg->filename);
+			log_ui_w("%s: no support for fxping symlinks yet\n",farg->filename);
 			break;
 		} else if(fxp_file->file_type == FILE_TYPE_FILE) {
 			if(!transfer_succ(fxp(s, farg->dst, farg->filename,
 					s->current_working_dir, farg->dst->current_working_dir))) {
-				log_ui(s->thread_id, LOG_T_E, "%s: fxp failed!\n",
-						farg->filename);
+				log_ui_e("%s: fxp failed!\n", farg->filename);
 				break;
 			}
 		} else if(fxp_file->file_type == FILE_TYPE_DIR) {
 			if(!transfer_succ(fxp_recursive(s, farg->dst, farg->filename,
 					s->current_working_dir, farg->dst->current_working_dir))) {
-				log_ui(s->thread_id, LOG_T_E, "%s: recursive fxp failed!\n",
-						farg->filename);
+				log_ui_e("%s: recursive fxp failed!\n", farg->filename);
 				break;
 			}
 		} else {
-			log_ui(s->thread_id, LOG_T_E, "%s: unknown file type!\n",
-					farg->filename);
+			log_ui_e("%s: unknown file type!\n", farg->filename);
 			break;
 		}
 
-		log_ui(s->thread_id, LOG_T_I, "%s: fxp complete\n", farg->filename);
+		log_ui_i("%s: fxp complete\n", farg->filename);
 
 		free(farg);
 		break;
@@ -298,14 +282,12 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 				(char *)m->data);
 
 		if(rm_file == NULL) {
-			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n",
-					(char *)m->data);
+			log_ui_e("%s: no such file exists!\n", (char *)m->data);
 			break;
 		}
 
 		if(rm_file->file_type == FILE_TYPE_LINK) {
-			log_ui(s->thread_id, LOG_T_W,
-					"%s: no support for deleting symlinks yet\n",
+			log_ui_w("%s: no support for deleting symlinks yet\n",
 					(char *)m->data);
 		} else if(rm_file->file_type == FILE_TYPE_FILE) {
 			int del_len = strlen((char *)m->data) + 8;
@@ -316,11 +298,9 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 			control_send(s, s_del);
 
 			if(control_recv(s) != 250) {
-				log_ui(s->thread_id, LOG_T_E,
-						"%s: error deleting file!\n", (char *)m->data);
+				log_ui_e("%s: error deleting file!\n", (char *)m->data);
 			} else {
-				log_ui(s->thread_id, LOG_T_I, "%s: file has been deleted!\n",
-						(char *)m->data);
+				log_ui_i("%s: file has been deleted!\n", (char *)m->data);
 			}
 
 			free(s_del);
@@ -333,11 +313,9 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 			control_send(s, s_rmd);
 
 			if(control_recv(s) != 250) {
-				log_ui(s->thread_id, LOG_T_E,
-						"%s: error deleting directory!\n", (char *)m->data);
+				log_ui_e("%s: error deleting directory!\n", (char *)m->data);
 			} else {
-				log_ui(s->thread_id, LOG_T_I,
-						"%s: directory has been deleted!\n", (char *)m->data);
+				log_ui_i("%s: directory has been deleted!\n", (char *)m->data);
 			}
 
 			free(s_rmd);
@@ -356,7 +334,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		control_send(s, s_site);
 		control_recv(s);
 
-		log_ui(s->thread_id, LOG_T_I, "SITE Response:\n%s", s->last_recv);
+		log_ui_i("SITE Response:\n%s", s->last_recv);
 		break;
 
 	case EV_SITE_QUOTE:
@@ -372,7 +350,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		control_send(s, s_qt);
 		control_recv(s);
 
-		log_ui(s->thread_id, LOG_T_I, "Raw response:\n%s", s->last_recv);
+		log_ui_i("Raw response:\n%s", s->last_recv);
 		break;
 
 	case EV_SITE_MKDIR:
@@ -382,11 +360,9 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		}
 
 		if(ftp_mkd(s, (char *)m->data)) {
-			log_ui(s->thread_id, LOG_T_I, "%s: dir created\n",
-					(char *)m->data);
+			log_ui_i("%s: dir created\n", (char *)m->data);
 		} else {
-			log_ui(s->thread_id, LOG_T_E, "%s: error creating dir\n",
-					(char *)m->data);
+			log_ui_e("%s: error creating dir\n", (char *)m->data);
 		}
 		break;
 	case EV_SITE_VIEW_NFO:
@@ -400,22 +376,19 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 				(char *)m->data);
 
 		if(nfile == NULL) {
-			log_ui(s->thread_id, LOG_T_E, "%s: no such file exists!\n",
-					(char *)m->data);
+			log_ui_e("%s: no such file exists!\n", (char *)m->data);
 			break;
 		}
 
 		if(nfile->file_type == FILE_TYPE_FILE) {
 			if(nfile->size > NFO_DL_MAX_SZ) {
-				log_ui(s->thread_id, LOG_T_E,
-						"%s: exceeds max size of %d bytes!\n",
+				log_ui_e("%s: exceeds max size of %d bytes!\n",
 						(char *)m->data, NFO_DL_MAX_SZ);
 				break;
 			}
 
 			if(!ftp_get(s, (char *)m->data, "/tmp/", s->current_working_dir)) {
-				log_ui(s->thread_id, LOG_T_E, "%s: download failed!\n",
-						(char *)m->data);
+				log_ui_e("%s: download failed!\n", (char *)m->data);
 				break;
 			}
 
@@ -424,8 +397,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 			FILE *nfd = fopen(nfo_path, "r");
 
 			if(nfd == NULL) {
-				log_ui(s->thread_id, LOG_T_E, "%s: error opening tmp file!\n",
-						(char *)m->data);
+				log_ui_e("%s: error opening tmp file!\n", (char *)m->data);
 				break;
 			}
 
@@ -442,10 +414,9 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 			fclose(nfd);
 			unlink(nfo_path);
 			free(nfo_path);
-			log_ui(s->thread_id, LOG_T_D, "%s\n", nfo_data);
+			log_ui_d("%s\n", nfo_data);
 		} else {
-			log_ui(s->thread_id, LOG_T_E, "%s: invalid file type!\n",
-					(char *)m->data);
+			log_ui_e("%s: invalid file type!\n", (char *)m->data);
 			break;
 		}
 
@@ -494,11 +465,10 @@ void *thread_ui(void *ptr) {
 void *thread_site(void *ptr) {
 	struct site_info *site = (struct site_info*) ptr;
 	site->thread_id = gen_id();
-	log_ui(site->thread_id, LOG_T_I, "Connecting to %s..\n", site->name);
+	log_ui_i("Connecting to %s..\n", site->name);
 
 	if(!ftp_connect(site)) {
-		log_ui(site->thread_id, LOG_T_E, "Unable to connect to %s\n",
-				site->name);
+		log_ui_e("Unable to connect to %s\n", site->name);
 		struct msg *m = malloc(sizeof(struct msg));
 		m->to_id = THREAD_ID_UI;
 		m->from_id = site->thread_id;
@@ -508,7 +478,7 @@ void *thread_site(void *ptr) {
 		return 0;
 	} else {
 		site->ls_do_cache = true;
-		log_ui(site->thread_id, LOG_T_I, "Connected to %s\n", site->name);
+		log_ui_i("Connected to %s\n", site->name);
 
 		if(config_get_conf()->show_dirlist_on_cwd) {
 			cmd_execute(site->thread_id, EV_SITE_LS, NULL);

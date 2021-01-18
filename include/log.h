@@ -18,3 +18,7 @@ void log_cleanup();
 void log_print(uint32_t n);
 void log_w(char *format, ...);
 void log_ui(uint32_t from_id, uint32_t type, char *format, ...);
+void log_ui_e(char *format, ...);
+void log_ui_w(char *format, ...);
+void log_ui_i(char *format, ...);
+void log_ui_d(char *format, ...);

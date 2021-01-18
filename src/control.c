@@ -167,7 +167,7 @@ int32_t control_recv(struct site_info *site) {
 		m->event = EV_UI_RM_SITE;
 		msg_send(m);
 
-		log_ui(site->thread_id, LOG_T_E, "%s: connection timed out.\n", site->name);
+		log_ui_e("%s: connection timed out.\n", site->name);
 	}
 
 	return code;

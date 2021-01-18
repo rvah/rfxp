@@ -66,6 +66,7 @@ void log_w(char *format, ...) {
 	pthread_mutex_unlock(&log_mtx);
 }
 
+
 void log_ui(uint32_t from_id, uint32_t type, char *format, ...) {
 	va_list args;
 	va_start(args, format);
@@ -89,4 +90,32 @@ void log_ui(uint32_t from_id, uint32_t type, char *format, ...) {
 	m->event = EV_UI_LOG;
 	m->data = (void *)data;
 	msg_send(m);
+}
+
+void log_ui_e(char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	log_ui(-1, LOG_T_E,	format, args);
+	va_end(args);
+}
+
+void log_ui_w(char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	log_ui(-1, LOG_T_W,	format, args);
+	va_end(args);
+}
+
+void log_ui_i(char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	log_ui(-1, LOG_T_I,	format, args);
+	va_end(args);
+}
+
+void log_ui_d(char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	log_ui(-1, LOG_T_D,	format, args);
+	va_end(args);
 }

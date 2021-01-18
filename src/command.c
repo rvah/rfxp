@@ -432,7 +432,7 @@ void cmd_local_ls(char *line) {
 	char cwd[PATH_MAX];
 	getcwd(cwd, sizeof(cwd));
 
-	log_ui(THREAD_ID_UI, LOG_T_I, TCOL_GREEN "[%s]:\n" TCOL_RESET, cwd);
+	log_ui_i(TCOL_GREEN "[%s]:\n" TCOL_RESET, cwd);
 
 	const char *color = __color_white;
 
@@ -455,7 +455,7 @@ void cmd_local_ls(char *line) {
 			}
 		}
 
-		log_ui(THREAD_ID_UI, LOG_T_I, generate_ui_dirlist_item(color, fl));
+		log_ui_i(generate_ui_dirlist_item(color, fl));
 
 		prev = fl;
 		fl = fl->next;
@@ -473,11 +473,11 @@ void cmd_local_cd(char *line) {
 	str_trim(arg_path);
 
 	if(chdir(arg_path) != 0) {
-		log_ui(THREAD_ID_UI, LOG_T_E,"%s: error CWD\n", arg_path);
+		log_ui_e("%s: error CWD\n", arg_path);
 		return;
 	}
 
-	log_ui(THREAD_ID_UI, LOG_T_I,"cwd successful.\n");
+	log_ui_i("cwd successful.\n");
 
 	return;
 }

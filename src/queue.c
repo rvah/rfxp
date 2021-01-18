@@ -121,8 +121,7 @@ void queue_remove(uint32_t id) {
 			}
 
 			free(p);
-			log_ui(THREAD_ID_UI, LOG_T_I,
-				"%d: item was removed from queue!\n",id);
+			log_ui_i("%d: item was removed from queue!\n",id);
 			return;
 		}
 
@@ -130,20 +129,20 @@ void queue_remove(uint32_t id) {
 		p = p->next;
 	}
 
-	log_ui(THREAD_ID_UI, LOG_T_E,"%d: ID does not exist in queue!\n", id);
+	log_ui_e("%d: ID does not exist in queue!\n", id);
 }
 
 void queue_print() {
 	struct queue_item *p = first_item();
 
 	if(p == NULL) {
-		log_ui(THREAD_ID_QUEUE, LOG_T_E, "Queue is empty!\n");
+		log_ui_e("Queue is empty!\n");
 		return;
 	}
 
 	while(p != NULL) {
 		char *s = item_info_string(p);
-		log_ui(THREAD_ID_QUEUE, LOG_T_I, "[%s]\n", s);
+		log_ui_i("[%s]\n", s);
 		free(s);
 		p = p->next;
 	}
@@ -155,10 +154,10 @@ bool queue_running() {
 
 void queue_execute() {
 	__queue_running = true;
-	log_ui(THREAD_ID_QUEUE, LOG_T_I, "Starting queue..\n");
+	log_ui_i("Starting queue..\n");
 
 	if(__transfer_queue == NULL) {
-		log_ui(THREAD_ID_QUEUE, LOG_T_E, "Queue is empty!\n");
+		log_ui_e("Queue is empty!\n");
 		__queue_running = false;
 		return;
 	}
@@ -169,7 +168,7 @@ void queue_execute() {
 	while(p != NULL) {
 		char *info = item_info_string(p);
 
-		log_ui(THREAD_ID_QUEUE, LOG_T_I, "Executing: [%s]\n", info);
+		log_ui_i("Executing: [%s]\n", info);
 
 		free(info);
 
@@ -245,7 +244,7 @@ void queue_execute() {
 		queue_remove(prev->id);
 	}
 
-	log_ui(THREAD_ID_QUEUE, LOG_T_I, "Queue done!\n");
+	log_ui_i("Queue done!\n");
 	__queue_running = false;
 }
 

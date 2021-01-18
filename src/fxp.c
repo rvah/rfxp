@@ -30,7 +30,7 @@ static struct transfer_result *transfer_recursive(struct site_info *src,
 	}
 
 	if(file->skip) {
-		log_ui(src->thread_id, LOG_T_W, "%s: skip\n", _dirname);
+		log_ui_w("%s: skip\n", _dirname);
 		ret_val = transfer_result_create(true, strdup(_dirname), 0, 0.0f, true,
 				FILE_TYPE_DIR);
 		goto _transfer_recursive_cleanup;
@@ -43,14 +43,13 @@ static struct transfer_result *transfer_recursive(struct site_info *src,
 
 	if(rfile == NULL) {
 		if(!ftp_mkd(dst, new_dpath)) {
-			log_ui(dst->thread_id, LOG_T_E, "%s: mkdir failed!\n", _dirname);
+			log_ui_e("%s: mkdir failed!\n", _dirname);
 			ret_val = transfer_result_create(false, strdup(_dirname), 0, 0.0f,
 					false, FILE_TYPE_DIR);
 			goto _transfer_recursive_cleanup;
 		}
 	} else if(rfile->file_type != FILE_TYPE_DIR) {
-		log_ui(dst->thread_id, LOG_T_E, "%s: remote file not a directory!\n",
-				_dirname);
+		log_ui_e("%s: remote file not a directory!\n", _dirname);
 		ret_val = transfer_result_create(false, strdup(_dirname), 0, 0.0f,
 				false, FILE_TYPE_DIR);
 		goto _transfer_recursive_cleanup;
@@ -85,7 +84,7 @@ static struct transfer_result *transfer_recursive(struct site_info *src,
 	struct file_item *fl = src->cur_dirlist;
 
 	if(fl == NULL) {
-		log_ui(src->thread_id, LOG_T_W, "%s: empty dir\n", _dirname);
+		log_ui_w("%s: empty dir\n", _dirname);
 		ret_val = transfer_result_create(true, strdup(_dirname), 0, 0.0f, true,
 				FILE_TYPE_DIR);
 		goto _transfer_recursive_cleanup;
@@ -118,21 +117,19 @@ static struct transfer_result *transfer_recursive(struct site_info *src,
 
 		if(fl->file_type == FILE_TYPE_FILE) {
 			cur_file_num++;
-			log_ui(src->thread_id, LOG_T_I, "%s: fxp'ing file [%d/%d]\n",
-					fl->file_name, cur_file_num, tot_files);
+			log_ui_i("%s: fxp'ing file [%d/%d]\n", fl->file_name,
+					cur_file_num, tot_files);
 
 			struct transfer_result *f_ret = fxp(src, dst, fl->file_name,
 					new_spath, new_dpath);
 
 			if(!f_ret->success) {
-				log_ui(src->thread_id, LOG_T_E, "%s: fxp failed!\n",
-						fl->file_name);
+				log_ui_e("%s: fxp failed!\n", fl->file_name);
 			}
 
 			rp->next = f_ret;
 		} else if(fl->file_type == FILE_TYPE_DIR) {
-			log_ui(src->thread_id, LOG_T_I, "%s: fxp'ing dir..\n",
-					fl->file_name);
+			log_ui_i("%s: fxp'ing dir..\n", fl->file_name);
 
 			rp->next = transfer_recursive(src, dst, fl->file_name, new_spath,
 					new_dpath);
@@ -205,7 +202,7 @@ struct transfer_result *fxp(struct site_info *src, struct site_info *dst,
 	}
 
 	if(file->skip) {
-		log_ui(src->thread_id, LOG_T_W, "%s: skip\n", filename);
+		log_ui_w("%s: skip\n", filename);
 		ret_val = transfer_result_create(true, strdup(filename), 0, 0.0f, true,
 				FILE_TYPE_FILE);
 		goto _fxp_cleanup;
@@ -215,7 +212,7 @@ struct transfer_result *fxp(struct site_info *src, struct site_info *dst,
 
 	if(dst->xdupe_enabled) {
 		if(site_xdupe_has(dst, new_dpath)) {
-			log_ui(dst->thread_id, LOG_T_W, "%s: skip (x-dupe)\n", filename);
+			log_ui_w("%s: skip (x-dupe)\n", filename);
 			ret_val = transfer_result_create(true, strdup(filename), 0, 0.0f,
 					true, FILE_TYPE_FILE);
 			goto _fxp_cleanup;
@@ -297,8 +294,8 @@ struct transfer_result *fxp(struct site_info *src, struct site_info *dst,
 	char *speed = s_calc_transfer_speed(&time_start, &time_end, file->size);
 	char *s_size = parse_file_size(file->size);
 
-	log_ui(src->thread_id, LOG_T_I, "%s: fxp'd %s at %s in %ds\n", filename,
-			s_size, speed, time_end.tv_sec - time_start.tv_sec);
+	log_ui_i("%s: fxp'd %s at %s in %ds\n", filename, s_size, speed,
+			time_end.tv_sec - time_start.tv_sec);
 
 	free(speed);
 	free(s_size);
@@ -334,8 +331,8 @@ struct transfer_result *fxp_recursive(struct site_info *src,
 	ftp_ls(src);
 	ftp_ls(dst);
 
-	log_ui(src->thread_id, LOG_T_I, "Stats: %s\n", s_gen_stats(ret,
-				time_end.tv_sec - time_start.tv_sec));
+	log_ui_i("Stats: %s\n", s_gen_stats(ret,
+			time_end.tv_sec - time_start.tv_sec));
 
 	free(src_origin);
 	free(dst_origin);

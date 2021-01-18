@@ -33,7 +33,7 @@ void ident_set_setting(const char *name, const char *value) {
 
 void ident_start() {
 	if(ident_conf == NULL) {
-		log_ui(THREAD_ID_IDENT, LOG_T_E, "Ident: config not set!\n");
+		log_ui_e("Ident: config not set!\n");
 		return;
 	}
 
@@ -49,11 +49,11 @@ void ident_start() {
 	char s[INET6_ADDRSTRLEN];
 
 	if(sockfd == -1) {
-		log_ui(THREAD_ID_IDENT, LOG_T_E, "Ident: error opening socket!\n");
+		log_ui_e("Ident: error opening socket!\n");
 		return;
 	}
 
-	log_ui(THREAD_ID_IDENT, LOG_T_I, "Ident server is ready.\n");
+	log_ui_i("Ident server is ready.\n");
 
 	while(1) {
 		sin_size = sizeof(client_addr);
@@ -76,7 +76,7 @@ void ident_start() {
 			if(!is_connecting) {
 				net_close_socket(newfd);
 
-				log_ui(THREAD_ID_IDENT, LOG_T_W, "Ident: suspicious connection attempt from %s!\n", s);
+				log_ui_w("Ident: suspicious connection attempt from %s!\n", s);
 			}
 		}
 
