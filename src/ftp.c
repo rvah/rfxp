@@ -683,7 +683,7 @@ struct pasv_details *ftp_pasv(struct site_info *site, bool handshake) {
 	} else {
 		sent = control_send(site, "PASV\r\n");
 	}
-	
+
 	if(!sent) {
 		return NULL;
 	}
@@ -753,7 +753,7 @@ struct transfer_result *ftp_get(struct site_info *site, const char *filename,
 
 	struct io_item *src = NULL;
 	struct io_item *dst = NULL;
-	struct stats_transfer *stats = NULL; 
+	struct stats_transfer *stats = NULL;
 
 	struct file_item *file = filesystem_find_file(site->cur_dirlist, filename);
 
@@ -821,7 +821,7 @@ struct transfer_result *ftp_get(struct site_info *site, const char *filename,
 	ssize_t tot_read = 0;
 
 	if((tot_read = io_transfer_data(src, dst,
-			(void (*)(void *, size_t))stats_transfer_update, stats)) == -1) {	
+			(void (*)(void *, size_t))stats_transfer_update, stats)) == -1) {
 		ret_val = transfer_result_create(false, strdup(filename), 0, 0.0f,
 				false, FILE_TYPE_FILE);
 		goto _ftp_get_cleanup;

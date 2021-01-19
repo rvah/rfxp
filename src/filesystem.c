@@ -299,7 +299,7 @@ static char *default_local_lister(const char *path) {
 		struct stat s_stat;
 
 		if(lstat(full_path, &s_stat) == -1) {
-			printf("error: could not read file: %s\n", full_path);
+			log_ui_e("error: could not read file: %s\n", full_path);
 			free(full_path);
 			continue;
 		}
@@ -462,15 +462,13 @@ char *filesystem_local_list(const char *path) {
 }
 
 void filesystem_print_file_item(struct file_item *item) {
-	printf("--- -  ->\n");
-	printf("Type: %d\n", item->file_type);
-	printf("Permissions: %s\n", item->permissions);
-	printf("Owner/User: %s\n", item->owner_user);
-	printf("Owner/Group: %s\n", item->owner_group);
-	printf("Size(b): %lu\n", item->size);
-	printf("date: %s\n", item->date);
-	printf("name: %s\n", item->file_name);
-	printf("<-  - ---\n");
+	log_ui_i("Type: %d\n", item->file_type);
+	log_ui_i("Permissions: %s\n", item->permissions);
+	log_ui_i("Owner/User: %s\n", item->owner_user);
+	log_ui_i("Owner/Group: %s\n", item->owner_group);
+	log_ui_i("Size(b): %lu\n", item->size);
+	log_ui_i("date: %s\n", item->date);
+	log_ui_i("name: %s\n", item->file_name);
 }
 
 struct file_item *filesystem_parse_list(const char *text_list,

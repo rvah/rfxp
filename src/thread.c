@@ -114,7 +114,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		break;
 	case EV_SITE_CWD:
 		if(m->data == NULL) {
-			printf("EV_SITE_CWD: bad path\n");
+			log_ui_e("EV_SITE_CWD: bad path\n");
 			break;
 		}
 
@@ -143,7 +143,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		break;
 	case EV_SITE_PUT:
 		if(m->data == NULL) {
-			printf("EV_SITE_PUT: bad path\n");
+			log_ui_e("EV_SITE_PUT: bad path\n");
 			break;
 		}
 		str_rtrim_slash((char *)m->data);
@@ -192,7 +192,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		break;
 	case EV_SITE_GET:
 		if(m->data == NULL) {
-			printf("EV_SITE_GET: bad path\n");
+			log_ui_e("EV_SITE_GET: bad path\n");
 			break;
 		}
 
@@ -234,7 +234,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		struct fxp_arg *farg = (struct fxp_arg*)m->data;
 
 		if(farg->filename == NULL) {
-			printf("EV_SITE_GET: bad path\n");
+			log_ui_e("EV_SITE_GET: bad path\n");
 			break;
 		}
 
@@ -273,7 +273,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		break;
 	case EV_SITE_RM:
 		if(m->data == NULL) {
-			printf("EV_SITE_PUT: bad path\n");
+			log_ui_e("EV_SITE_PUT: bad path\n");
 			break;
 		}
 
@@ -323,7 +323,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		break;
 	case EV_SITE_SITE:
 		if(m->data == NULL) {
-			printf("EV_SITE_SITE: no command specified.\n");
+			log_ui_e("EV_SITE_SITE: no command specified.\n");
 			break;
 		}
 
@@ -339,7 +339,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 
 	case EV_SITE_QUOTE:
 		if(m->data == NULL) {
-			printf("EV_SITE_QUOTE: no command specified.\n");
+			log_ui_e("EV_SITE_QUOTE: no command specified.\n");
 			break;
 		}
 
@@ -355,7 +355,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 
 	case EV_SITE_MKDIR:
 		if(m->data == NULL) {
-			printf("EV_SITE_MKDIR: no dir specified.\n");
+			log_ui_e("EV_SITE_MKDIR: no dir specified.\n");
 			break;
 		}
 
@@ -367,7 +367,7 @@ static void site_handle_event(struct msg *m, struct site_info *s) {
 		break;
 	case EV_SITE_VIEW_NFO:
 		if(m->data == NULL) {
-			printf("EV_SITE_VIEW_NFO: bad path\n");
+			log_ui_e("EV_SITE_VIEW_NFO: bad path\n");
 			break;
 		}
 

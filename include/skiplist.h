@@ -1,6 +1,7 @@
 #pragma once
 #include "general.h"
 #include "util.h"
+#include "log.h"
 
 struct skiplist_rule {
 	char *str;

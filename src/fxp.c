@@ -183,7 +183,7 @@ _transfer_recursive_cleanup:
 
 struct transfer_result *fxp(struct site_info *src, struct site_info *dst,
 		const char *filename, const char *src_dir, const char *dst_dir) {
-	printf("from %s to %s with file: %s\n", src_dir, dst_dir, filename);
+	log_ui_i("from %s to %s with file: %s\n", src_dir, dst_dir, filename);
 	struct transfer_result *ret_val = NULL;
 	char *new_dpath = NULL;
 	char *new_spath = NULL;

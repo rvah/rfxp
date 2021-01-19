@@ -37,7 +37,7 @@ static char *get_arg_full(char *line, int i) {
 }
 
 static void bad_arg(char *cmd) {
-	printf("bad arg\n");
+	log_ui_w("bad arg\n");
 }
 
 static struct site_info *get_site(char which) {
@@ -126,7 +126,7 @@ void cmd_open(char *line, char which) {
 	char *arg_site = get_arg(line, 1);
 
 	if(which == ' ') {
-		printf("not implemented.\n");
+		log_ui_w("not implemented.\n");
 		return;
 	}
 
@@ -138,7 +138,7 @@ void cmd_open(char *line, char which) {
 	struct site_config *site_conf = get_site_config_by_name(arg_site);
 
 	if(site_conf == NULL) {
-		printf("could not find site %s.\n", arg_site);
+		log_ui_e("could not find site %s.\n", arg_site);
 		return;
 	}
 
@@ -167,7 +167,7 @@ void cmd_open(char *line, char which) {
 */
 void cmd_close(char *line, char which) {
 	if(which == ' ') {
-		printf("not implemented.\n");
+		log_ui_w("not implemented.\n");
 		return;
 	}
 
@@ -184,7 +184,7 @@ void cmd_close(char *line, char which) {
 	}
 
 	if(s == NULL) {
-		printf("no site connected.\n");
+		log_ui_w("no site connected.\n");
 		return;
 	}
 
@@ -202,7 +202,7 @@ void cmd_ls(char *line, char which) {
 	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
-		printf("no site connected.\n");
+		log_ui_w("no site connected.\n");
 		return;
 	}
 
@@ -210,14 +210,14 @@ void cmd_ls(char *line, char which) {
 }
 
 void cmd_ref(char *line, char which) {
-	printf("ref %c\n", which);
+	log_ui_w("ref %c\n", which);
 }
 
 void cmd_cd(char *line, char which) {
 	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
-		printf("no site connected.\n");
+		log_ui_w("no site connected.\n");
 		return;
 	}
 
@@ -235,7 +235,7 @@ void cmd_put(char *line, char which) {
 	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
-		printf("no site connected.\n");
+		log_ui_w("no site connected.\n");
 		return;
 	}
 
@@ -253,7 +253,7 @@ void cmd_get(char *line, char which) {
 	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
-		printf("no site connected.\n");
+		log_ui_w("no site connected.\n");
 		return;
 	}
 
@@ -270,7 +270,7 @@ void cmd_rm(char *line, char which) {
 	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
-		printf("no site connected.\n");
+		log_ui_w("no site connected.\n");
 		return;
 	}
 
@@ -288,7 +288,7 @@ void cmd_site(char *line, char which) {
 	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
-		printf("no site connected.\n");
+		log_ui_w("no site connected.\n");
 		return;
 	}
 
@@ -300,7 +300,7 @@ void cmd_quote(char *line, char which) {
 	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
-		printf("no site connected.\n");
+		log_ui_w("no site connected.\n");
 		return;
 	}
 
@@ -324,12 +324,12 @@ void cmd_fxp(char *line, char which) {
 
 
 	if(s == NULL) {
-		printf("src site not connected.\n");
+		log_ui_w("src site not connected.\n");
 		return;
 	}
 
 	if(d == NULL) {
-		printf("dst site not connected.\n");
+		log_ui_w("dst site not connected.\n");
 		return;
 	}
 
@@ -351,7 +351,7 @@ void cmd_mkdir(char *line, char which) {
 	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
-		printf("no site connected.\n");
+		log_ui_w("no site connected.\n");
 		return;
 	}
 
@@ -391,7 +391,7 @@ void cmd_nfo(char *line, char which) {
 	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
-		printf("no site connected.\n");
+		log_ui_w("no site connected.\n");
 		return;
 	}
 
@@ -408,13 +408,13 @@ void cmd_nfo(char *line, char which) {
 	const char *pos = strrchr(d, '.');
 
 	if(!pos || pos == d) {
-		printf("unable to read file type\n");
+		log_ui_e("unable to read file type\n");
 		return;
 	}
 
 	if( (strcmp(pos+1, "nfo") != 0) && (strcmp(pos+1, "sfv") != 0)
 			&& (strcmp(pos+1, "diz") != 0) && (strcmp(pos+1, "txt") != 0) ) {
-		printf("bad filetype, supported filetypes: nfo, sfv, diz, txt\n");
+		log_ui_e("bad filetype, supported filetypes: nfo, sfv, diz, txt\n");
 		return;
 	}
 
@@ -467,7 +467,7 @@ void cmd_local_cd(char *line) {
 	char *arg_path = get_arg_full(line, 1);
 
 	if( (arg_path == NULL) || (strlen(arg_path) == 0)) {
-		printf("bad path\n");
+		log_ui_e("bad path\n");
 	}
 
 	str_trim(arg_path);
@@ -483,12 +483,12 @@ void cmd_local_cd(char *line) {
 }
 
 void cmd_local_rm(char *line) {
-	printf("not implemented.\n");
+	log_ui_w("not implemented.\n");
 	return;
 }
 
 void cmd_local_mkdir(char *line) {
-	printf("not implemented.\n");
+	log_ui_w("not implemented.\n");
 	return;
 }
 
@@ -521,7 +521,7 @@ void cmd_sort(char *line, char type) {
 		break;
 	}
 
-	printf("sort set to: %s\n", s_sort[new_sort]);
+	log_ui_i("sort set to: %s\n", s_sort[new_sort]);
 
 	filesystem_set_sort(new_sort);
 }
@@ -543,7 +543,7 @@ void cmd_sm(char *line) {
 	char *which_site;
 
 	if(cmd == NULL) {
-		printf("bad args, please see help\n");
+		log_ui_e("bad args, please see help\n");
 		return;
 	}
 
@@ -560,12 +560,12 @@ void cmd_sm(char *line) {
 
 		if((name == NULL) || (hport == NULL) || (user == NULL)
 				|| (pass == NULL)) {
-			printf("bad args, please see help\n");
+			log_ui_e("bad args, please see help\n");
 			return;
 		}
 
 		if(strstr(hport, ":") == NULL) {
-			printf("bad host:port format, please fix and try again.\n");
+			log_ui_e("bad host:port format, please fix and try again.\n");
 			return;
 		}
 
@@ -591,13 +591,13 @@ void cmd_sm(char *line) {
 		char *val = get_arg(line, 4);
 
 		if( (name == NULL) || (setting == NULL) || (val == NULL) ) {
-			printf("bad args, please see help\n");
+			log_ui_e("bad args, please see help\n");
 			return;
 		}
 
 		sm_edit(name, setting, val);
 	} else {
-		printf("bad sm command, please see help\n");
+		log_ui_e("bad sm command, please see help\n");
 		return;
 	}
 }
@@ -613,14 +613,14 @@ void cmd_qput(char *line, char which) {
 	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
-		printf("no site connected.\n");
+		log_ui_w("no site connected.\n");
 		return;
 	}
 
 	char *lpath = path_expand_full_local(arg_path);
 
 	if(lpath == NULL) {
-		printf("path does not exist.\n");
+		log_ui_e("path does not exist.\n");
 		return;
 	}
 
@@ -638,7 +638,7 @@ void cmd_qget(char *line, char which) {
 	struct site_info *s = get_site(which);
 
 	if(s == NULL) {
-		printf("no site connected.\n");
+		log_ui_w("no site connected.\n");
 		return;
 	}
 
@@ -670,12 +670,12 @@ void cmd_qfxp(char *line, char which) {
 
 
 	if(s == NULL) {
-		printf("src site not connected.\n");
+		log_ui_w("src site not connected.\n");
 		return;
 	}
 
 	if(d == NULL) {
-		printf("dst site not connected.\n");
+		log_ui_w("dst site not connected.\n");
 		return;
 	}
 
@@ -686,7 +686,7 @@ void cmd_qfxp(char *line, char which) {
 
 void cmd_qx(char *line) {
 	if(queue_running()) {
-		printf("error: queue already running.\n");
+		log_ui_w("error: queue already running.\n");
 		return;
 	}
 

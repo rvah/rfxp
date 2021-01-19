@@ -6,7 +6,7 @@ void skiplist_print() {
 	struct skiplist_rule *p = skiplist_rules;
 
 	while(p != NULL) {
-		printf("%s\n", p->str);
+		log_ui_i("%s", p->str);
 		p = p->next;
 	}
 }

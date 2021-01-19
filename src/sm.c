@@ -3,7 +3,7 @@
 bool sm_add_site(const char *name, const char *username, const char *password,
 		const char *host, const char *port) {
 	if(get_site_config_by_name(name) != NULL) {
-		printf("site with name '%s' already exists.\n", name);
+		log_ui_e("site with name '%s' already exists.\n", name);
 		return false;
 	}
 
@@ -32,11 +32,11 @@ bool sm_add_site(const char *name, const char *username, const char *password,
 
 	add_site_config(new_site);
 
-	printf("added site '%s'\n", new_site->name);
+	log_ui_i("added site '%s'\n", new_site->name);
 
 	//commit changes to disk
 	if(!write_site_config_file(config_get_conf()->sites, "noob")) {
-		printf("Error writing sitedb to disk!\n");
+		log_ui_e("Error writing sitedb to disk!\n");
 		return false;
 	}
 
@@ -45,7 +45,7 @@ bool sm_add_site(const char *name, const char *username, const char *password,
 
 bool sm_remove_site(const char *name) {
 	if((name == NULL) || (get_site_config_by_name(name) == NULL)) {
-		printf("could not find any site called '%s'\n", name);
+		log_ui_e("could not find any site called '%s'\n", name);
 		return false;
 	}
 
@@ -60,7 +60,7 @@ bool sm_remove_site(const char *name) {
 				prev->next = all->next;
 			}
 
-			printf("deleted site '%s'\n", all->name);
+			log_ui_i("deleted site '%s'\n", all->name);
 
 			free(all);
 			break;
@@ -72,7 +72,7 @@ bool sm_remove_site(const char *name) {
 
 	//commit changes to disk
 	if(!write_site_config_file(config_get_conf()->sites, "noob")) {
-		printf("Error writing sitedb to disk!\n");
+		log_ui_e("Error writing sitedb to disk!\n");
 		return false;
 	}
 
@@ -82,11 +82,11 @@ bool sm_remove_site(const char *name) {
 void sm_list_all() {
 	struct site_config *s = config_get_conf()->sites;
 	if(s == NULL) {
-		printf("no sites added.\n");
+		log_ui_i("no sites added.\n");
 		return;
 	}
 
-	printf("Added sites:\n");
+	log_ui_i("Added sites:\n");
 
 	while(s != NULL) {
 		printf("%s", s->name);
@@ -105,14 +105,14 @@ void sm_list(const char *name) {
 	struct site_config *site = get_site_config_by_name(name);
 
 	if(site == NULL) {
-		printf("could not find any site called '%s'\n", name);
+		log_ui_e("could not find any site called '%s'\n", name);
 	} else {
-		printf("ID: %d\n", site->id);
-		printf("name: %s\n", site->name);
-		printf("host: %s\n", site->host);
-		printf("port: %s\n", site->port);
-		printf("user: %s\n", site->user);
-		printf("pass: <hidden>\n");
+		log_ui_i("ID: %d\n", site->id);
+		log_ui_i("name: %s\n", site->name);
+		log_ui_i("host: %s\n", site->host);
+		log_ui_i("port: %s\n", site->port);
+		log_ui_i("user: %s\n", site->user);
+		log_ui_i("pass: <hidden>\n");
 	}
 }
 
@@ -120,20 +120,20 @@ void sm_edit(const char *name, const char *setting, const char *value) {
 	struct site_config *site = get_site_config_by_name(name);
 
 	if(site == NULL) {
-		printf("could not find any site called '%s'\n", name);
+		log_ui_e("could not find any site called '%s'\n", name);
 		return;
 	}
 
 	if(strcmp(setting, "name") == 0) {
 		if(strlen(value) == 0) {
-			printf("error: bad name format\n");
+			log_ui_e("bad name format\n");
 			return;
 		}
 
 		strlcpy(site->name, value, 255);
 	} else if(strcmp(setting, "host") == 0) {
 		if(strstr(value, ":") == NULL) {
-			printf("bad host:port format, please fix and try again.\n");
+			log_ui_e("bad host:port format, please fix and try again.\n");
 			return;
 		}
 
@@ -148,26 +148,26 @@ void sm_edit(const char *name, const char *setting, const char *value) {
 		free(hport);
 	} else if(strcmp(setting, "user") == 0) {
 		if(strlen(value) == 0) {
-			printf("error: bad username format\n");
+			log_ui_e("bad username format\n");
 			return;
 		}
 
 		strlcpy(site->user, value, 255);
 	} else if(strcmp(setting, "pass") == 0) {
 		if(strlen(value) == 0) {
-			printf("error: bad password format\n");
+			log_ui_e("bad password format\n");
 			return;
 		}
 
 		strlcpy(site->pass, value, 255);
 	} else {
-		printf("%s: unknown attribute\n", setting);
+		log_ui_e("%s: unknown attribute\n", setting);
 		return;
 	}
 
 	//commit changes
 	if(!write_site_config_file(config_get_conf()->sites, "noob")) {
-		printf("Error writing sitedb to disk!\n");
+		log_ui_e("Error writing sitedb to disk!\n");
 		return;
 	}
 }

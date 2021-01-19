@@ -194,7 +194,6 @@ static int get_current_arg_n() {
 
 static char **tab_auto_complete(const char *text, int start, int end) {
 	int arg_n = get_current_arg_n();
-	//printf("argn: %d\n",arg_n);
 	rl_attempted_completion_over = 1;
 
 	//if first arg, look for commands

@@ -92,7 +92,7 @@ static void add_item(uint32_t type, struct site_info *site_src,
 	}
 
 	char *info = item_info_string(item);
-	printf("Added to queue [%s]\n", info);
+	log_ui_i("Added to queue [%s]\n", info);
 	free(info);
 }
 
@@ -189,13 +189,13 @@ void queue_execute() {
 			//change src path if wrong
 			if(strcmp(p->path_src, p->site_src->current_working_dir) != 0) {
 				if(!ftp_cwd(p->site_src, p->path_src)) {
-					printf("error: failed to cwd.\n");
+					log_ui_e("failed to cwd.\n");
 					p->status = Q_ITEM_STAT_FAILURE;
 					break;
 				}
 
 				if(!ftp_ls(p->site_src)) {
-					printf("error: could not get a dirlist.\n");
+					log_ui_e("could not get a dirlist.\n");
 					p->status = Q_ITEM_STAT_FAILURE;
 					break;
 				}
@@ -214,13 +214,13 @@ void queue_execute() {
 			//change src path if wrong
 			if(strcmp(p->path_src, p->site_src->current_working_dir) != 0) {
 				if(!ftp_cwd(p->site_src, p->path_src)) {
-					printf("error: failed to cwd.\n");
+					log_ui_e("failed to cwd.\n");
 					p->status = Q_ITEM_STAT_FAILURE;
 					break;
 				}
 
 				if(!ftp_ls(p->site_src)) {
-					printf("error: could not get a dirlist.\n");
+					log_ui_e("could not get a dirlist.\n");
 					p->status = Q_ITEM_STAT_FAILURE;
 					break;
 				}
@@ -260,7 +260,7 @@ void queue_add_put(struct site_info *site, char *path_local, char *path_site) {
 	free(realpath);
 
 	if(files == NULL) {
-		printf("Could not find any local files matching pattern.\n");
+		log_ui_e("Could not find any local files matching pattern.\n");
 		return;
 	}
 
@@ -287,12 +287,12 @@ void queue_add_get(struct site_info *site, char *path_site, char *path_local) {
 
 	if(strcmp(dir, cwd) != 0) {
 		if(!ftp_cwd(site, dir)) {
-			printf("error: failed to cwd.\n");
+			log_ui_e("failed to cwd.\n");
 			return;
 		}
 
 		if(!ftp_ls(site)) {
-			printf("error: could not get a dirlist.\n");
+			log_ui_e("could not get a dirlist.\n");
 			return;
 		}
 	}
@@ -301,7 +301,7 @@ void queue_add_get(struct site_info *site, char *path_site, char *path_local) {
 			filesystem_file_item_cpy(site->cur_dirlist), basename(path_site));
 
 	if(files == NULL) {
-		printf("Could not find any remote files matching pattern.\n");
+		log_ui_w("Could not find any remote files matching pattern.\n");
 		return;
 	}
 
@@ -330,12 +330,12 @@ void queue_add_fxp(struct site_info *site_src, struct site_info *site_dst,
 
 	if(strcmp(dir, cwd) != 0) {
 		if(!ftp_cwd(site_src, dir)) {
-			printf("error: failed to cwd.\n");
+			log_ui_e("failed to cwd.\n");
 			return;
 		}
 
 		if(!ftp_ls(site_src)) {
-			printf("error: could not get a dirlist.\n");
+			log_ui_e("could not get a dirlist.\n");
 			return;
 		}
 	}
@@ -345,7 +345,7 @@ void queue_add_fxp(struct site_info *site_src, struct site_info *site_dst,
 			basename(path_src));
 
 	if(files == NULL) {
-		printf("Could not find any remote files matching pattern.\n");
+		log_ui_w("Could not find any remote files matching pattern.\n");
 		return;
 	}
 
